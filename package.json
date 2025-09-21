@@ -1,0 +1,29 @@
+{
+  "name": "ayurdiscovery-ai",
+  "version": "1.0.0",
+  "description": "Professional MERN stack multiagent AI system for Ayurvedic drug discovery",
+  "main": "server/server.js",
+  "scripts": {
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "cd server && npm start",
+    "client": "cd client && npm start",
+    "build": "cd client && npm run build",
+    "install-client": "cd client && npm install",
+    "install-server": "cd server && npm install",
+    "install-all": "npm run install-server && npm run install-client"
+  },
+  "keywords": [
+    "ayurveda",
+    "drug-discovery",
+    "ai",
+    "mern",
+    "multiagent",
+    "telugu",
+    "voice-input"
+  ],
+  "author": "AyurDiscovery Team",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
