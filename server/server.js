@@ -19,7 +19,11 @@ const server = http.createServer(app);
 // Initialize Socket.io
 const io = socketIo(server, {
   cors: {
-    origin: process.env.CORS_ORIGIN || "http://localhost:3000",
+    origin: [
+      "http://localhost:3000",
+      "https://jubilant-lamp-5gx5jgjgvw9q34q74-3000.app.github.dev",
+      process.env.CORS_ORIGIN
+    ].filter(Boolean),
     methods: ["GET", "POST"]
   }
 });
@@ -31,7 +35,11 @@ connectDB();
 app.use(helmet());
 app.use(morgan('combined'));
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || "http://localhost:3000",
+  origin: [
+    "http://localhost:3000",
+    "https://jubilant-lamp-5gx5jgjgvw9q34q74-3000.app.github.dev",
+    process.env.CORS_ORIGIN
+  ].filter(Boolean),
   credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));

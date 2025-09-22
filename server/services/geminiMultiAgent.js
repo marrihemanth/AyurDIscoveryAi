@@ -7,6 +7,12 @@ class GeminiMultiAgentService {
     this.model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
     this.isDemo = process.env.DEMO_MODE === 'true';
     this.mockDelay = parseInt(process.env.MOCK_AI_DELAY) || 2000;
+    
+    // Debug logging
+    console.log('🤖 Gemini Service Initialized');
+    console.log('📝 API Key present:', !!process.env.GEMINI_API_KEY);
+    console.log('🎯 Model:', 'gemini-1.5-flash');
+    console.log('🔄 Demo Mode:', this.isDemo);
   }
 
   // LITERATURE AGENT: Analyze Ayurvedic texts and traditional knowledge
@@ -18,51 +24,74 @@ You are a Literature Analysis Agent specializing in Ayurvedic medicine and pharm
 Query: "${query}"
 Context: ${JSON.stringify(context)}
 
-As an expert in traditional Ayurvedic texts and modern scientific literature, provide a comprehensive analysis:
+As an expert in traditional Ayurvedic texts and modern scientific literature, provide a comprehensive, research-grade analysis:
 
-1. TRADITIONAL KNOWLEDGE:
-   - Relevant Ayurvedic principles and texts
-   - Sanskrit/Telugu terminology with accurate translations
-   - Traditional therapeutic approaches
-   - Rasa, Virya, Vipaka, and Prabhava of mentioned substances
+1. TRADITIONAL KNOWLEDGE FOUNDATION:
+   - Cite specific Ayurvedic texts (Charaka Samhita chapters, Sushruta Samhita references)
+   - Provide Sanskrit/Telugu terminology with accurate translations
+   - Detail traditional therapeutic approaches with specific doshas affected
+   - Include Rasa (taste), Virya (potency), Vipaka (post-digestive effect), and Prabhava (special effect)
+   - Traditional preparation methods and regional variations
 
-2. COMPOUND IDENTIFICATION:
-   - Active compounds mentioned in traditional texts
-   - Modern chemical identification of traditional preparations
-   - Bioactive molecules with therapeutic potential
+2. BIOACTIVE COMPOUND IDENTIFICATION:
+   - List specific active compounds with chemical formulas
+   - Quantify concentration ranges (mg/g, percentage by weight)
+   - Identify extraction methods and bioavailability data
+   - Compare traditional preparations vs standardized extracts
 
-3. THERAPEUTIC MECHANISMS:
-   - Traditional understanding of action
-   - Modern scientific correlations
-   - Potential molecular targets
+3. MOLECULAR MECHANISMS & TARGETS:
+   - Specific protein targets (receptors, enzymes, ion channels)
+   - Signaling pathways affected (NF-κB, MAPK, etc.)
+   - Cellular mechanisms (apoptosis, autophagy, inflammation cascades)
+   - Pharmacokinetic data (absorption, metabolism, elimination)
 
-4. CULTURAL CONTEXT:
-   - Telugu traditional names: జ్వరం (jwaram - fever), ఔషధం (aushadam - medicine)
-   - Regional usage patterns
-   - Cultural significance and preparation methods
+4. CLINICAL EVIDENCE SYNTHESIS:
+   - Recent clinical trial results with patient numbers and outcomes
+   - Meta-analysis findings and effect sizes
+   - Dosage protocols and therapeutic windows
+   - Safety profiles and contraindications
 
-5. RESEARCH GAPS:
-   - Areas needing modern scientific validation
-   - Opportunities for drug discovery
+5. CULTURAL & REGIONAL APPLICATIONS:
+   - Telugu traditional names with phonetic pronunciation
+   - Regional preparation methods (Andhra Pradesh, Telangana)
+   - Cultural significance and ritualistic uses
+   - Modern adaptations in local healthcare
 
-Format as structured JSON with confidence scores (0-1) for each section.
-Include Telugu terms with phonetic pronunciations.
+6. RESEARCH GAPS & OPPORTUNITIES:
+   - Unexplored therapeutic applications
+   - Needed clinical studies and sample sizes
+   - Drug development potential and patent landscape
+   - Standardization challenges and solutions
+
+**OUTPUT FORMAT**: Provide detailed, specific information with:
+- Numerical data (concentrations, dosages, trial results)
+- Chemical names and structures
+- Specific citations and references
+- Telugu terms: హల్దీ (haldi - turmeric), వాపు (vapu - inflammation), చికిత్స (chikitsa - treatment)
+- Confidence scores (0-1) for each major finding
+- Processing timestamps and data quality assessments
+
+Make this analysis worthy of publication in a peer-reviewed journal.
       `;
 
       // Always use real Gemini API for dynamic analysis
+      console.log('📚 Literature Agent: Making Gemini API call for query:', query);
       const result = await this.model.generateContent(prompt);
       const response = await result.response;
+      const analysisText = response.text();
+      console.log('📚 Literature Agent: Received response length:', analysisText.length);
       
       return {
         success: true,
         agent: 'literature',
-        analysis: response.text(),
+        analysis: analysisText,
         timestamp: new Date(),
         confidence: 0.85,
         processingTime: Date.now() - startTime
       };
     } catch (error) {
-      console.error('Literature Agent Error:', error);
+      console.error('📚 Literature Agent Error:', error.message);
+      console.error('📚 Full error:', error);
       return this.getErrorResponse('literature', error);
     }
   }
@@ -72,33 +101,62 @@ Include Telugu terms with phonetic pronunciations.
     try {
       const startTime = Date.now();
       const prompt = `
-You are a Compound Analysis Agent specializing in natural product drug discovery.
+You are a Compound Analysis Agent specializing in natural product drug discovery and computational chemistry.
 
 Compound: "${compoundName}"
 Known Properties: ${JSON.stringify(properties)}
 
-Provide comprehensive molecular analysis:
+Provide comprehensive molecular analysis with pharmaceutical-grade detail:
 
-1. MOLECULAR STRUCTURE:
-   - Chemical formula and structure
-   - Key functional groups
-   - Stereochemistry considerations
+1. MOLECULAR CHARACTERIZATION:
+   - Complete chemical formula with molecular weight
+   - IUPAC name and common synonyms
+   - 3D structure description and key functional groups
+   - Stereochemistry and chirality analysis
+   - Physical properties (melting point, solubility, logP values)
 
-2. PHARMACOKINETICS (ADME):
-   - Absorption potential
-   - Distribution characteristics
-   - Metabolism pathways
-   - Excretion routes
+2. PHARMACOKINETIC PROFILE (ADME-T):
+   - Absorption: oral bioavailability predictions, Caco-2 permeability
+   - Distribution: plasma protein binding, blood-brain barrier penetration
+   - Metabolism: CYP450 enzyme interactions, metabolite identification
+   - Excretion: renal clearance, half-life estimations
+   - Toxicity: LD50 values, hepatotoxicity, cardiotoxicity predictions
 
-3. DRUG TARGET PREDICTION:
-   - Potential protein targets
-   - Mechanism of action hypotheses
-   - Pathway interactions
+3. DRUG TARGET IDENTIFICATION:
+   - Primary protein targets with binding affinity predictions (Ki, IC50)
+   - Secondary targets and off-target effects
+   - Allosteric binding sites and cooperative effects
+   - Structure-activity relationships (SAR)
 
-4. SAFETY ASSESSMENT:
-   - Toxicity predictions
-   - Drug-drug interactions
-   - Contraindications
+4. MECHANISM OF ACTION ANALYSIS:
+   - Cellular signaling pathways affected
+   - Downstream effects and cascade reactions
+   - Time-dependent pharmacodynamics
+   - Dose-response relationships
+
+5. SAFETY & TOXICOLOGY PROFILE:
+   - Acute and chronic toxicity assessments
+   - Drug-drug interaction potential (CYP inhibition/induction)
+   - Contraindications and special populations
+   - Therapeutic window and safety margins
+
+6. DRUG DEVELOPMENT POTENTIAL:
+   - Lipinski's Rule of Five compliance
+   - Druggability score and lead-likeness
+   - Synthetic accessibility and cost analysis
+   - Patent landscape and freedom to operate
+   - Formulation considerations
+
+7. TRADITIONAL CORRELATION:
+   - How computational predictions align with Ayurvedic uses
+   - Telugu traditional applications and dosing
+   - Regional preparation methods affecting bioactivity
+
+**OUTPUT FORMAT**: Provide quantitative data including:
+- Numerical predictions with confidence intervals
+- Chemical structures and binding modes
+- Kinetic parameters and rate constants
+- Telugu terms: అణువు (anavu - molecule), ప్రభావం (prabhavam - effect)
 
 5. DRUG DEVELOPMENT POTENTIAL:
    - Lipinski's Rule of Five compliance
@@ -138,27 +196,66 @@ Include specific molecular targets and pathways.
     try {
       const startTime = Date.now();
       const prompt = `
-You are a Research Agent conducting comprehensive literature analysis.
+You are a Research Agent conducting comprehensive literature analysis and systematic reviews.
 
 Research Query: "${query}"
 Focus Area: ${focus}
 
-Conduct a thorough research analysis as if searching through major databases:
+Conduct a thorough research analysis simulating access to major scientific databases:
 
-1. LITERATURE SEARCH RESULTS:
-   - Simulate search through PubMed, Google Scholar, Ayurvedic databases
-   - Identify 5-10 most relevant papers (provide realistic titles, authors, journals)
-   - Include both traditional and modern research
+1. SYSTEMATIC LITERATURE SEARCH:
+   - Simulate comprehensive search through PubMed, Scopus, Web of Science
+   - Include traditional Ayurvedic databases and regional journals
+   - Search terms, filters, and inclusion/exclusion criteria
+   - Total papers found and selection process
 
-2. EVIDENCE SYNTHESIS:
-   - Quality of evidence assessment
-   - Consistency across studies
-   - Sample sizes and methodologies
+2. HIGH-IMPACT STUDIES IDENTIFIED:
+   - 8-12 most relevant peer-reviewed papers with complete citations
+   - Include journal impact factors and publication years
+   - Randomized controlled trials, meta-analyses, and systematic reviews
+   - Traditional texts and ethnobotanical studies
 
-3. RESEARCH GAPS:
-   - What's missing in current literature
-   - Contradictory findings
-   - Areas needing investigation
+3. EVIDENCE SYNTHESIS & META-ANALYSIS:
+   - Quantitative analysis of pooled data where possible
+   - Effect sizes, confidence intervals, and heterogeneity assessment
+   - Risk of bias assessment for each study
+   - GRADE evidence quality ratings
+
+4. CLINICAL OUTCOMES DATA:
+   - Primary and secondary endpoints from trials
+   - Patient demographics and sample sizes
+   - Statistical significance and clinical relevance
+   - Adverse events and safety profiles
+
+5. MECHANISTIC INSIGHTS:
+   - Molecular mechanisms supported by evidence
+   - Biomarker studies and pharmacodynamic data
+   - Preclinical to clinical translation gaps
+   - Dose-response relationships
+
+6. RESEARCH QUALITY ASSESSMENT:
+   - Study design quality and methodological rigor
+   - Potential biases and confounding factors
+   - Reproducibility and consistency across studies
+   - Publication bias assessment
+
+7. KNOWLEDGE GAPS & FUTURE DIRECTIONS:
+   - Critical research questions remaining unanswered
+   - Proposed study designs and sample size calculations
+   - Regulatory pathway considerations
+   - Translation to clinical practice
+
+8. TRADITIONAL-MODERN INTEGRATION:
+   - How scientific evidence validates traditional uses
+   - Discrepancies between traditional and modern findings
+   - Cultural considerations in research design
+   - Telugu research contributions and regional studies
+
+**OUTPUT FORMAT**: Provide detailed academic-quality analysis with:
+- Complete bibliographic citations
+- Statistical data and confidence intervals
+- Evidence level classifications (1a, 1b, 2a, etc.)
+- Telugu terms: పరిశోధన (parishodhana - research), ప్రమాణం (pramanam - evidence)
 
 4. VERIFICATION STATUS:
    - Cross-reference traditional claims with modern research
@@ -198,7 +295,7 @@ Include Telugu traditional medicine references where relevant.
     try {
       const startTime = Date.now();
       const prompt = `
-You are the Coordinator Agent synthesizing multi-agent analysis results.
+You are the Coordinator Agent synthesizing multi-agent analysis for executive-level decision making.
 
 Original Query: "${originalQuery}"
 
@@ -207,20 +304,61 @@ Literature Agent: ${JSON.stringify(literatureData, null, 2)}
 Compound Agent: ${JSON.stringify(compoundData, null, 2)}
 Research Agent: ${JSON.stringify(researchData, null, 2)}
 
-Provide comprehensive synthesis:
+Provide executive-level synthesis with actionable insights:
 
-1. KEY INSIGHTS:
-   - Correlations between traditional knowledge and modern science
-   - Novel discoveries from cross-agent analysis
-   - Surprising findings or contradictions
+1. EXECUTIVE SUMMARY:
+   - Key finding headline with impact assessment
+   - Overall drug development potential score (0-100)
+   - Recommended next steps with priority ranking
+   - Resource requirements and timeline estimates
 
-2. DRUG DEVELOPMENT ASSESSMENT:
-   - Overall potential (Low/Medium/High/Very High)
-   - Technical feasibility
-   - Commercial viability
-   - Timeline estimations
+2. CROSS-AGENT CORRELATION ANALYSIS:
+   - How traditional knowledge aligns with molecular predictions
+   - Where computational models confirm/contradict research evidence
+   - Confidence convergence across different analytical approaches
+   - Novel insights emerging from multi-agent synthesis
 
-3. CULTURAL SENSITIVITY:
+3. THERAPEUTIC POTENTIAL ASSESSMENT:
+   - Primary indication with market size estimates
+   - Secondary applications with development timelines
+   - Competitive advantage over existing therapies
+   - Intellectual property landscape and freedom to operate
+
+4. TECHNICAL FEASIBILITY ANALYSIS:
+   - Development complexity score (1-5)
+   - Critical technical hurdles and mitigation strategies
+   - Required infrastructure and capabilities
+   - Regulatory pathway assessment (FDA, EMA considerations)
+
+5. COMMERCIAL VIABILITY MATRIX:
+   - Market opportunity size and growth projections
+   - Development cost estimates and funding requirements
+   - Revenue projections and return on investment
+   - Partnership opportunities and licensing potential
+
+6. RISK ASSESSMENT & MITIGATION:
+   - Technical risks and probability assessments
+   - Regulatory risks and approval timelines
+   - Market risks and competitive threats
+   - Mitigation strategies for each risk category
+
+7. CULTURAL & ETHICAL CONSIDERATIONS:
+   - Traditional knowledge attribution and benefit sharing
+   - Community engagement and consent protocols
+   - Cultural sensitivity in development approach
+   - Telugu community involvement opportunities
+
+8. STRATEGIC RECOMMENDATIONS:
+   - Immediate action items (next 90 days)
+   - Medium-term milestones (6-18 months)
+   - Long-term strategic goals (2-5 years)
+   - Success metrics and KPIs
+
+**OUTPUT FORMAT**: Provide strategic-level analysis with:
+- Executive dashboard metrics
+- Decision trees and risk matrices
+- Timeline charts and milestone markers
+- Telugu cultural terms: నిర్ణయం (nirnayam - decision), అభివృద్ధి (abhivruddhi - development)
    - Respect for traditional knowledge
    - Benefit-sharing considerations
    - Community involvement recommendations

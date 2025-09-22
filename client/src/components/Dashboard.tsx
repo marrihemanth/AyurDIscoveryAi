@@ -23,7 +23,7 @@ function Dashboard() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSearch = async (query: string, language: string = 'en') => {
+  const handleSearch = async (query: string, searchType: string = 'comprehensive', language: string = 'en') => {
     try {
       setError(null);
       setIsAnalyzing(true);
@@ -35,38 +35,135 @@ function Dashboard() {
         updateAgent(type, { status: 'processing', progress: 10 });
       });
 
-      // For demo - create a mock result while backend is being fixed
-      setTimeout(() => {
-        const mockResult = {
-          id: `result-${Date.now()}`,
-          agentId: 'literature',
-          title: `Analysis: ${query}`,
-          description: `Comprehensive Ayurvedic analysis for "${query}" showing traditional wisdom meets modern science.`,
-          confidence: 0.87,
-          data: {
-            traditionalNames: ['हल्दी (Haldi)', 'పసుపు (Pasupu)'],
-            compounds: ['Curcumin', 'Turmerone', 'Bisdemethoxycurcumin'],
-            therapeuticUses: ['Anti-inflammatory', 'Antioxidant', 'Hepatoprotective'],
-            culturalContext: 'Used in Ayurvedic medicine for over 4000 years'
-          },
-          timestamp: new Date()
-        };
-
-        setResults([mockResult]);
+      // Call real API for analysis
+      console.log('🚀 Making real API call to backend...');
+      const analysisResults = await discoveryAPI.analyzeQuery(query, language);
+      console.log('✅ Received API results:', analysisResults);
+      
+      if (!analysisResults.success) {
+        throw new Error(analysisResults.error || 'Analysis failed');
+      }
+      
+      // The API returns immediately with sessionId, then processes asynchronously
+      const sessionId = analysisResults.sessionId;
+      console.log('📋 Session ID:', sessionId);
+      
+      // Poll for results every 2 seconds until complete
+      let attempts = 0;
+      const maxAttempts = 30; // 60 seconds max
+      const pollInterval = 2000; // 2 seconds
+      
+      const pollForResults = async (): Promise<any> => {
+        attempts++;
+        console.log(`🔄 Polling attempt ${attempts}/${maxAttempts}...`);
         
-        // Update agents to completed
-        agentTypes.forEach((type, index) => {
-          setTimeout(() => {
-            updateAgent(type, { status: 'completed', progress: 100 });
-          }, index * 500);
+        try {
+          const sessionData = await discoveryAPI.getSession(sessionId);
+          console.log('📊 Session data:', sessionData);
+          
+          // Check if all agents are completed
+          const agents = sessionData.agents || [];
+          const completedAgents = agents.filter((agent: any) => agent.status === 'completed');
+          const processingAgents = agents.filter((agent: any) => agent.status === 'processing');
+          const totalAgents = agents.length;
+          
+          console.log(`✅ Completed: ${completedAgents.length}/${totalAgents} agents`);
+          
+          // Update progress
+          const progress = totalAgents > 0 ? (completedAgents.length / totalAgents) * 100 : 0;
+          agentTypes.forEach(type => {
+            const agent = agents.find((a: any) => a.type === type);
+            if (agent) {
+              updateAgent(type, { 
+                status: agent.status === 'completed' ? 'completed' : 
+                        agent.status === 'processing' ? 'processing' : 'idle',
+                progress: agent.status === 'completed' ? 100 : 
+                         agent.status === 'processing' ? 50 : 10
+              });
+            }
+          });
+          
+          // If all agents completed or max attempts reached
+          if (completedAgents.length === totalAgents || attempts >= maxAttempts) {
+            return sessionData;
+          }
+          
+          // Continue polling
+          await new Promise(resolve => setTimeout(resolve, pollInterval));
+          return pollForResults();
+          
+        } catch (pollError) {
+          console.error('Polling error:', pollError);
+          if (attempts >= maxAttempts) {
+            throw new Error('Polling timeout - analysis may still be running');
+          }
+          await new Promise(resolve => setTimeout(resolve, pollInterval));
+          return pollForResults();
+        }
+      };
+      
+      // Start polling and wait for completion
+      const finalSessionData = await pollForResults();
+      
+      // Convert completed agents to frontend format
+      const agentResults: DiscoveryResult[] = [];
+      console.log('🔍 Processing final session data:', finalSessionData);
+      
+      if (finalSessionData.agents) {
+        finalSessionData.agents.forEach((agent: any) => {
+          console.log(`📋 Processing agent ${agent.type}:`, agent);
+          
+          // Check for completed agents with results
+          if (agent.status === 'completed') {
+            const resultData = agent.result || agent.results || {};
+            const analysisText = resultData.analysis || resultData.synthesis || resultData.processed || 
+                               JSON.stringify(resultData) || 'Analysis completed';
+            
+            agentResults.push({
+              id: `result-${sessionId}-${agent.type}`,
+              agentId: agent.type,
+              title: `${agent.name}: ${query}`,
+              description: analysisText,
+              confidence: resultData.confidence || 0.85,
+              data: {
+                fullResponse: resultData,
+                processingTime: resultData.processingTime,
+                timestamp: resultData.timestamp,
+                agentType: agent.type,
+                agentName: agent.name
+              },
+              timestamp: new Date(resultData.timestamp || Date.now())
+            });
+            
+            console.log(`✅ Added result for ${agent.type}:`, agentResults[agentResults.length - 1]);
+          } else {
+            console.log(`⚠️  Agent ${agent.type} not completed, status: ${agent.status}`);
+          }
         });
-        
-        setIsAnalyzing(false);
-      }, 3000);
-
-      // Uncomment this when backend is ready:
-      // const analysisResults = await discoveryAPI.analyzeQuery(query, language);
-      // setResults(analysisResults);
+      }
+      
+      console.log(`🎯 Final results array (${agentResults.length} items):`, agentResults);
+      
+      console.log(`🎯 Final results array (${agentResults.length} items):`, agentResults);
+      
+      if (agentResults.length === 0) {
+        console.warn('⚠️  No results found! This might indicate:');
+        console.warn('   1. Agents completed but results not properly stored');
+        console.warn('   2. Database connection issues');
+        console.warn('   3. Result format mismatch');
+        setError('Analysis completed but no results were returned. This may be a backend issue.');
+      } else {
+        setError(null);
+      }
+      
+      setResults(agentResults);
+      
+      // Ensure all agents show as completed
+      agentTypes.forEach(type => {
+        updateAgent(type, { status: 'completed', progress: 100 });
+      });
+      
+      setIsAnalyzing(false);
 
     } catch (err) {
       console.error('Search error:', err);

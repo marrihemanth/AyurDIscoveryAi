@@ -234,23 +234,27 @@ async function processDiscoverySession(sessionId, query, language, voiceInput) {
 // Helper functions
 async function updateAgentStatus(sessionId, agentType, status, task = null, results = null) {
   try {
-    if (!process.env.MONGODB_URI) return; // Skip in demo mode
-    
+    // Always try to update agent status, with fallback if database unavailable
     const update = {
       status,
       lastUpdate: new Date(),
       ...(task && { currentTask: task }),
       ...(results && { 
-        results,
+        results: results, // Store as 'results' field (matches model)
         confidence: results.confidence || 0,
         processingTime: results.processingTime || 0
       })
     };
-    
-    await Agent.findOneAndUpdate(
-      { sessionId, type: agentType },
-      update
-    );
+
+    if (process.env.MONGODB_URI) {
+      await Agent.findOneAndUpdate(
+        { sessionId, type: agentType },
+        update
+      );
+      console.log(`✅ Updated ${agentType} agent: ${status}${results ? ' (with results)' : ''}`);
+    } else {
+      console.log(`⚠️  Demo mode: ${agentType} agent ${status}${results ? ' (results generated but not stored)' : ''}`);
+    }
   } catch (error) {
     console.error('Agent status update error:', error);
   }

@@ -68,28 +68,30 @@ const AgentStatus: React.FC<AgentStatusProps> = ({ agents }) => {
             </ListItemIcon>
             <ListItemText
               primary={
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Typography variant="body1">{agent.name}</Typography>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>{agent.name}</span>
                   <Chip
                     label={agent.status}
                     size="small"
                     color={getStatusColor(agent.status)}
                     variant="outlined"
                   />
-                </Box>
+                </div>
               }
               secondary={
-                <Box sx={{ mt: 1 }}>
+                <div style={{ marginTop: '8px' }}>
                   <LinearProgress
                     variant="determinate"
                     value={agent.progress}
-                    sx={{ mb: 1 }}
+                    style={{ marginBottom: '8px' }}
                   />
-                  <Typography variant="caption">
+                  <div style={{ fontSize: '0.75rem', color: 'rgba(0, 0, 0, 0.6)' }}>
                     Progress: {agent.progress}% | Last updated: {agent.lastUpdate.toLocaleTimeString()}
-                  </Typography>
-                </Box>
+                  </div>
+                </div>
               }
+              primaryTypographyProps={{ component: 'div' }}
+              secondaryTypographyProps={{ component: 'div' }}
             />
           </ListItem>
         ))}
