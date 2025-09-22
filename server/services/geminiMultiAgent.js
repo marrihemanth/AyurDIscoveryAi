@@ -49,11 +49,7 @@ Format as structured JSON with confidence scores (0-1) for each section.
 Include Telugu terms with phonetic pronunciations.
       `;
 
-      if (this.isDemo) {
-        await this.simulateProcessing();
-        return this.getMockLiteratureResponse(query);
-      }
-
+      // Always use real Gemini API for dynamic analysis
       const result = await this.model.generateContent(prompt);
       const response = await result.response;
       
@@ -118,11 +114,7 @@ Provide confidence scores (0-1) for each prediction.
 Include specific molecular targets and pathways.
       `;
 
-      if (this.isDemo) {
-        await this.simulateProcessing();
-        return this.getMockCompoundResponse(compoundName);
-      }
-
+      // Always use real Gemini API for dynamic analysis
       const result = await this.model.generateContent(prompt);
       const response = await result.response;
       
@@ -182,11 +174,7 @@ Provide detailed citations, confidence scores, and reliability assessments.
 Include Telugu traditional medicine references where relevant.
       `;
 
-      if (this.isDemo) {
-        await this.simulateProcessing();
-        return this.getMockResearchResponse(query);
-      }
-
+      // Always use real Gemini API for dynamic analysis
       const result = await this.model.generateContent(prompt);
       const response = await result.response;
       
@@ -256,11 +244,7 @@ Maintain high cultural sensitivity while highlighting innovation opportunities.
 Provide actionable recommendations with confidence scores.
       `;
 
-      if (this.isDemo) {
-        await this.simulateProcessing();
-        return this.getMockCoordinatorResponse(originalQuery);
-      }
-
+      // Always use real Gemini API for dynamic analysis
       const result = await this.model.generateContent(prompt);
       const response = await result.response;
       
@@ -327,11 +311,7 @@ Include Telugu terms: వైద్యం (vaidyam - medicine), నివార�
 Provide structured output for other agents to process.
       `;
 
-      if (this.isDemo) {
-        await this.simulateProcessing();
-        return this.getMockVoiceResponse(transcript, language);
-      }
-
+      // Always use real Gemini API for dynamic analysis
       const result = await this.model.generateContent(prompt);
       const response = await result.response;
       
