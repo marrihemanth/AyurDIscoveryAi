@@ -1,4 +1,5 @@
 const express = require('express');
+const { body, validationResult } = require('express-validator');
 const fetch = require('node-fetch');
 const router = express.Router();
 
@@ -75,12 +76,35 @@ router.get('/test-tts', async (req, res) => {
   }
 });
 
+// Using the 'express-validator' library, add a validation and sanitization chain to this route.
+// It should check that the 'text' field from the request body is not empty.
+// Then, it should sanitize the 'text' field by trimming whitespace and escaping special characters.
+const validateSpeechText = [
+  body('text')
+    .notEmpty()
+    .withMessage('Text is required and cannot be empty')
+    .isLength({ min: 1, max: 1000 })
+    .withMessage('Text must be between 1 and 1000 characters')
+    .trim() // Trim whitespace from beginning and end
+    .escape() // Escape special characters to prevent XSS attacks
+];
+
 // TTS endpoint
-router.post('/synthesize-speech', async (req, res) => {
+router.post('/synthesize-speech', validateSpeechText, async (req, res) => {
   console.log('🎤 TTS Request received');
   console.log('📄 Request body:', JSON.stringify(req.body, null, 2));
   
   try {
+    // Check for validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
     const { text } = req.body;
     
     if (!text || text.trim().length === 0) {

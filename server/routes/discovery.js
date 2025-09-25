@@ -1,4 +1,5 @@
 const express = require('express');
+const { body, validationResult } = require('express-validator');
 const router = express.Router();
 const BedrockAIService = require('../services/bedrockMultiAgent');
 const DiscoverySession = require('../models/DiscoverySession');
@@ -8,10 +9,53 @@ const { v4: uuidv4 } = require('uuid');
 // Initialize Bedrock AI Service
 const aiService = new BedrockAIService();
 
+// Using the 'express-validator' library, add a validation and sanitization chain to this route.
+// It should check that the 'query' field from the request body is not empty.
+// Then, it should sanitize the 'query' field by trimming whitespace and escaping special characters.
+// Add logic to return a 400 error if validation fails.
+const validateDiscoveryQuery = [
+  body('query')
+    .notEmpty()
+    .withMessage('Query is required and cannot be empty')
+    .isLength({ min: 2, max: 1000 })
+    .withMessage('Query must be between 2 and 1000 characters')
+    .trim() // Trim whitespace from beginning and end
+    .escape(), // Escape special characters to prevent XSS attacks
+  
+  body('language')
+    .optional()
+    .isIn(['en', 'te'])
+    .withMessage('Language must be either en (English) or te (Telugu)'),
+  
+  body('voiceInput')
+    .optional()
+    .isBoolean()
+    .withMessage('Voice input must be a boolean value')
+];
+
 // Start a new discovery session with multi-agent analysis
-router.post('/analyze', async (req, res) => {
+router.post('/analyze', validateDiscoveryQuery, async (req, res) => {
   try {
+    // Check for validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
     const { query, language = 'en', voiceInput = false } = req.body;
+    
+    // Additional security check: Reject queries that contain only special characters
+    const cleanQuery = query.replace(/[^\w\s]/gi, '').trim();
+    if (cleanQuery.length < 2) {
+      return res.status(400).json({
+        success: false,
+        message: 'Query must contain at least 2 alphanumeric characters'
+      });
+    }
     const sessionId = uuidv4();
     
     // Create new discovery session
