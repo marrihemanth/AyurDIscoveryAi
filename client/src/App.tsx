@@ -1,31 +1,17 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { ThemeProvider } from '@mui/material/styles';
 import { CssBaseline } from '@mui/material';
+import { CustomThemeProvider, useTheme } from './theme/ThemeContext';
 import Dashboard from './components/Dashboard';
 import Header from './components/Header';
 import './App.css';
 
-const theme = createTheme({
-  palette: {
-    primary: {
-      main: '#2e7d32', // Green representing Ayurveda/nature
-    },
-    secondary: {
-      main: '#ff6f00', // Orange representing discovery/innovation
-    },
-    background: {
-      default: '#f5f5f5',
-    },
-  },
-  typography: {
-    fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
-  },
-});
+const AppContent: React.FC = () => {
+  const { currentTheme } = useTheme();
 
-function App() {
   return (
-    <ThemeProvider theme={theme}>
+    <ThemeProvider theme={currentTheme}>
       <CssBaseline />
       <Router>
         <div className="App">
@@ -38,6 +24,14 @@ function App() {
         </div>
       </Router>
     </ThemeProvider>
+  );
+};
+
+function App() {
+  return (
+    <CustomThemeProvider>
+      <AppContent />
+    </CustomThemeProvider>
   );
 }
 

@@ -1,9 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const geminiService = require('../services/geminiMultiAgent');
+const BedrockAIService = require('../services/bedrockMultiAgent');
 const DiscoverySession = require('../models/DiscoverySession');
 const Agent = require('../models/Agent');
 const { v4: uuidv4 } = require('uuid');
+
+// Initialize Bedrock AI Service
+const aiService = new BedrockAIService();
 
 // Start a new discovery session with multi-agent analysis
 router.post('/analyze', async (req, res) => {
@@ -149,7 +152,7 @@ router.post('/voice', async (req, res) => {
   try {
     const { transcript, language = 'en' } = req.body;
     
-    const result = await geminiService.processVoiceInput(transcript, language);
+    const result = await aiService.generateContent(transcript, 'research');
     
     res.json({
       success: true,
@@ -176,7 +179,7 @@ async function processDiscoverySession(sessionId, query, language, voiceInput) {
     let processedQuery = query;
     if (voiceInput) {
       await updateAgentStatus(sessionId, 'voice', 'processing', 'Processing voice input...');
-      const voiceResult = await geminiService.processVoiceInput(query, language);
+      const voiceResult = await aiService.generateContent(query, 'research');
       processedQuery = voiceResult.processed || query;
       await updateAgentStatus(sessionId, 'voice', 'completed', null, voiceResult);
     }
@@ -186,7 +189,7 @@ async function processDiscoverySession(sessionId, query, language, voiceInput) {
       // Literature Agent
       (async () => {
         await updateAgentStatus(sessionId, 'literature', 'processing', 'Analyzing traditional literature...');
-        const result = await geminiService.processWithLiteratureAgent(processedQuery, { language });
+        const result = await aiService.analyzeLiterature(processedQuery);
         await updateAgentStatus(sessionId, 'literature', 'completed', null, result);
         return result;
       })(),
@@ -194,7 +197,7 @@ async function processDiscoverySession(sessionId, query, language, voiceInput) {
       // Compound Agent
       (async () => {
         await updateAgentStatus(sessionId, 'compound', 'processing', 'Analyzing molecular compounds...');
-        const result = await geminiService.processWithCompoundAgent(processedQuery);
+        const result = await aiService.analyzeCompounds(processedQuery);
         await updateAgentStatus(sessionId, 'compound', 'completed', null, result);
         return result;
       })(),
@@ -202,7 +205,7 @@ async function processDiscoverySession(sessionId, query, language, voiceInput) {
       // Research Agent
       (async () => {
         await updateAgentStatus(sessionId, 'research', 'processing', 'Searching research literature...');
-        const result = await geminiService.processWithResearchAgent(processedQuery);
+        const result = await aiService.synthesizeResearch(processedQuery);
         await updateAgentStatus(sessionId, 'research', 'completed', null, result);
         return result;
       })()
@@ -210,7 +213,7 @@ async function processDiscoverySession(sessionId, query, language, voiceInput) {
     
     // Coordinator Agent - synthesize results
     await updateAgentStatus(sessionId, 'coordinator', 'processing', 'Synthesizing results...');
-    const coordinatorResult = await geminiService.coordinateAnalysis(
+    const coordinatorResult = await aiService.coordinateAnalysis(
       literatureResult, compoundResult, researchResult, processedQuery
     );
     await updateAgentStatus(sessionId, 'coordinator', 'completed', null, coordinatorResult);

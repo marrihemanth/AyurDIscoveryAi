@@ -8,6 +8,8 @@ import {
   Alert,
   LinearProgress,
   Chip,
+  Fade,
+  Slide,
 } from '@mui/material';
 import { useAgents } from '../hooks/useAgents';
 import AgentStatus from './AgentStatus';
@@ -189,91 +191,314 @@ function Dashboard() {
   };
 
   return (
-    <Container maxWidth="xl" sx={{ py: 4 }}>
-      <Grid container spacing={3}>
-        <Grid item xs={12}>
-          <Paper elevation={2} sx={{ p: 3, mb: 2, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
-            <Typography variant="h4" component="h1" sx={{ color: 'white', fontWeight: 'bold' }}>
-              🌿 AyurDiscovery AI
-            </Typography>
-            <Typography variant="subtitle1" sx={{ color: 'rgba(255,255,255,0.9)', mt: 1 }}>
-              Bridging Traditional Ayurvedic Wisdom with Modern AI Research
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
-              <Chip label="అయుర్వేదం" size="small" sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }} />
-              <Chip label="AI-Powered" size="small" sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }} />
-              <Chip label="Multi-Agent" size="small" sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }} />
-            </Box>
-          </Paper>
-        </Grid>
+    <Box
+      sx={{
+        minHeight: '100vh',
+        background: (theme) => theme.palette.mode === 'dark'
+          ? `linear-gradient(135deg, #0F0F23 0%, #1A1B3A 50%, #2D2E5F 100%)`
+          : `linear-gradient(135deg, ${theme.palette.background.default} 0%, #f1f5f9 100%)`,
+      }}
+    >
+      <Container maxWidth="xl" sx={{ py: 6 }}>
+        <Grid container spacing={4}>
+          {/* Hero Header */}
+          <Grid item xs={12}>
+            <Fade in timeout={800}>
+              <Paper 
+                elevation={0}
+                sx={{ 
+                  p: 6,
+                  borderRadius: 6,
+                  background: (theme) => theme.palette.mode === 'dark'
+                    ? 'linear-gradient(135deg, #8B7CF6 0%, #7C3AED 100%)'
+                    : 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  boxShadow: (theme) => theme.palette.mode === 'dark'
+                    ? '0 20px 60px rgba(139, 124, 246, 0.4)'
+                    : '0 20px 60px rgba(99, 102, 241, 0.3)',
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%239C92AC" fill-opacity="0.05"%3E%3Ccircle cx="30" cy="30" r="4"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
+                  },
+                }}
+              >
+                <Box sx={{ position: 'relative', zIndex: 1 }}>
+                  <Typography 
+                    variant="h2" 
+                    component="h1" 
+                    sx={{ 
+                      color: 'white', 
+                      fontWeight: 800,
+                      mb: 2,
+                      textShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                    }}
+                  >
+                    🌿 AyurDiscovery AI
+                  </Typography>
+                  <Typography 
+                    variant="h5" 
+                    sx={{ 
+                      color: 'rgba(255,255,255,0.9)', 
+                      mb: 4,
+                      fontWeight: 400,
+                      maxWidth: '600px',
+                    }}
+                  >
+                    Bridging Traditional Ayurvedic Wisdom with Modern AI Research
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                    <Chip 
+                      label="అయుర్వేదం" 
+                      sx={{ 
+                        bgcolor: 'rgba(255,255,255,0.2)', 
+                        color: 'white',
+                        fontWeight: 600,
+                        backdropFilter: 'blur(10px)',
+                        border: '1px solid rgba(255,255,255,0.3)',
+                      }} 
+                    />
+                    <Chip 
+                      label="AI-Powered" 
+                      sx={{ 
+                        bgcolor: 'rgba(255,255,255,0.2)', 
+                        color: 'white',
+                        fontWeight: 600,
+                        backdropFilter: 'blur(10px)',
+                        border: '1px solid rgba(255,255,255,0.3)',
+                      }} 
+                    />
+                    <Chip 
+                      label="Multi-Agent System" 
+                      sx={{ 
+                        bgcolor: 'rgba(255,255,255,0.2)', 
+                        color: 'white',
+                        fontWeight: 600,
+                        backdropFilter: 'blur(10px)',
+                        border: '1px solid rgba(255,255,255,0.3)',
+                      }} 
+                    />
+                  </Box>
+                </Box>
+              </Paper>
+            </Fade>
+          </Grid>
 
-        <Grid item xs={12} md={8}>
-          <Paper elevation={3} sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              🔍 Discovery Interface
-            </Typography>
-            <SearchInterface onSearch={handleSearch} isLoading={isAnalyzing} />
-            
-            <Box sx={{ mt: 2 }}>
-              <SpeechTest />
-              <VoiceInput 
-                onVoiceInput={handleVoiceInput} 
-                onTranscriptFinalized={handleTranscriptFinalized}
-              />
-            </Box>
-
-            {isAnalyzing && (
-              <Box sx={{ mt: 3 }}>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  AI Agents Analyzing...
+          {/* Search Interface */}
+          <Grid item xs={12} md={8}>
+            <Slide direction="up" in timeout={1000}>
+              <Paper 
+                elevation={0}
+                sx={(theme) => ({ 
+                  p: 4,
+                  borderRadius: 4,
+                  background: theme.palette.mode === 'dark'
+                    ? 'rgba(30, 41, 59, 0.8)'
+                    : 'rgba(255, 255, 255, 0.9)',
+                  backdropFilter: 'blur(20px)',
+                  border: theme.palette.mode === 'dark'
+                    ? '1px solid rgba(71, 85, 105, 0.3)'
+                    : '1px solid rgba(226, 232, 240, 0.6)',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: theme.palette.mode === 'dark'
+                      ? '0 20px 40px rgba(0, 0, 0, 0.4)'
+                      : '0 20px 40px rgba(15, 23, 42, 0.15)',
+                  }
+                })}
+              >
+                <Typography 
+                  variant="h5" 
+                  sx={{ 
+                    mb: 3, 
+                    fontWeight: 600,
+                    background: (theme) => theme.palette.mode === 'dark'
+                      ? 'linear-gradient(135deg, #A78BFA, #8B7CF6)'
+                      : 'linear-gradient(135deg, #6366f1, #4f46e5)',
+                    backgroundClip: 'text',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                  }}
+                >
+                  🔍 Discovery Interface
                 </Typography>
-                <LinearProgress />
-              </Box>
-            )}
+                
+                <SearchInterface onSearch={handleSearch} isLoading={isAnalyzing} />
+                
+                <Box sx={{ mt: 3 }}>
+                  <SpeechTest />
+                  <VoiceInput 
+                    onVoiceInput={handleVoiceInput} 
+                    onTranscriptFinalized={handleTranscriptFinalized}
+                  />
+                </Box>
 
-            {error && (
-              <Alert severity="error" sx={{ mt: 2 }}>
-                {error}
-              </Alert>
-            )}
-          </Paper>
-        </Grid>
+                {isAnalyzing && (
+                  <Fade in>
+                    <Box sx={{ mt: 4 }}>
+                      <Typography variant="body1" sx={{ mb: 2, fontWeight: 500 }}>
+                        ✨ AI Agents Analyzing...
+                      </Typography>
+                      <LinearProgress 
+                        sx={{
+                          borderRadius: 2,
+                          height: 6,
+                          '& .MuiLinearProgress-bar': {
+                            background: 'linear-gradient(90deg, #6366f1, #8b7cf6)',
+                          }
+                        }}
+                      />
+                    </Box>
+                  </Fade>
+                )}
 
-        <Grid item xs={12} md={4}>
-          <Paper elevation={3} sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              🤖 Agent Status
-            </Typography>
-            <AgentStatus agents={agents} />
-          </Paper>
-        </Grid>
+                {error && (
+                  <Alert 
+                    severity="error" 
+                    sx={{ 
+                      mt: 3,
+                      borderRadius: 3,
+                      '& .MuiAlert-icon': {
+                        fontSize: '1.5rem',
+                      }
+                    }}
+                  >
+                    {error}
+                  </Alert>
+                )}
+              </Paper>
+            </Slide>
+          </Grid>
 
-        <Grid item xs={12}>
-          <Paper elevation={3} sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              📊 Analysis Results
-            </Typography>
-            
-            {results.length > 0 ? (
-              <ResultsDisplay results={results} />
-            ) : (
-              <Box sx={{ 
-                textAlign: 'center',
-                py: 6,
-                color: 'text.secondary' 
-              }}>
-                <Typography variant="h6" gutterBottom>
-                  🔬 Ready for Analysis
+          {/* Agent Status */}
+          <Grid item xs={12} md={4}>
+            <Slide direction="left" in timeout={1200}>
+              <Paper 
+                elevation={0}
+                sx={(theme) => ({ 
+                  p: 4,
+                  borderRadius: 4,
+                  background: theme.palette.mode === 'dark'
+                    ? 'rgba(30, 41, 59, 0.8)'
+                    : 'rgba(255, 255, 255, 0.9)',
+                  backdropFilter: 'blur(20px)',
+                  border: theme.palette.mode === 'dark'
+                    ? '1px solid rgba(71, 85, 105, 0.3)'
+                    : '1px solid rgba(226, 232, 240, 0.6)',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: theme.palette.mode === 'dark'
+                      ? '0 20px 40px rgba(0, 0, 0, 0.4)'
+                      : '0 20px 40px rgba(15, 23, 42, 0.15)',
+                  }
+                })}
+              >
+                <Typography 
+                  variant="h5" 
+                  sx={{ 
+                    mb: 3, 
+                    fontWeight: 600,
+                    background: (theme) => theme.palette.mode === 'dark'
+                      ? 'linear-gradient(135deg, #FCD34D, #F59E0B)'
+                      : 'linear-gradient(135deg, #d97706, #b45309)',
+                    backgroundClip: 'text',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                  }}
+                >
+                  🤖 Agent Status
                 </Typography>
-                <Typography variant="body1">
-                  Enter a query above to start your AI-powered Ayurvedic research discovery
+                <AgentStatus agents={agents} />
+              </Paper>
+            </Slide>
+          </Grid>
+
+          {/* Analysis Results */}
+          <Grid item xs={12}>
+            <Slide direction="up" in timeout={1400}>
+              <Paper 
+                elevation={0}
+                sx={(theme) => ({ 
+                  p: 4,
+                  borderRadius: 4,
+                  background: theme.palette.mode === 'dark'
+                    ? 'rgba(30, 41, 59, 0.8)'
+                    : 'rgba(255, 255, 255, 0.9)',
+                  backdropFilter: 'blur(20px)',
+                  border: theme.palette.mode === 'dark'
+                    ? '1px solid rgba(71, 85, 105, 0.3)'
+                    : '1px solid rgba(226, 232, 240, 0.6)',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: theme.palette.mode === 'dark'
+                      ? '0 20px 40px rgba(0, 0, 0, 0.4)'
+                      : '0 20px 40px rgba(15, 23, 42, 0.15)',
+                  }
+                })}
+              >
+                <Typography 
+                  variant="h5" 
+                  sx={{ 
+                    mb: 3, 
+                    fontWeight: 600,
+                    background: (theme) => theme.palette.mode === 'dark'
+                      ? 'linear-gradient(135deg, #86EFAC, #22C55E)'
+                      : 'linear-gradient(135deg, #059669, #047857)',
+                    backgroundClip: 'text',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                  }}
+                >
+                  📊 Analysis Results
                 </Typography>
-              </Box>
-            )}
-          </Paper>
-        </Grid>
+                
+                {results.length > 0 ? (
+                  <ResultsDisplay results={results} />
+                ) : (
+                  <Box sx={{ 
+                    textAlign: 'center',
+                    py: 8,
+                    color: 'text.secondary',
+                    background: (theme) => theme.palette.mode === 'dark'
+                      ? 'rgba(15, 23, 42, 0.3)'
+                      : 'rgba(248, 250, 252, 0.5)',
+                    borderRadius: 3,
+                    border: (theme) => theme.palette.mode === 'dark'
+                      ? '2px dashed rgba(71, 85, 105, 0.3)'
+                      : '2px dashed rgba(203, 213, 225, 0.5)',
+                  }}>
+                    <Typography 
+                      variant="h4" 
+                      sx={{ 
+                        mb: 2, 
+                        fontWeight: 600,
+                        opacity: 0.7,
+                      }}
+                    >
+                      🔬
+                    </Typography>
+                    <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
+                      Ready for Analysis
+                    </Typography>
+                    <Typography variant="body1" sx={{ maxWidth: '400px', mx: 'auto' }}>
+                      Enter a query above to start your AI-powered Ayurvedic research discovery
+                    </Typography>
+                  </Box>
+                )}
+              </Paper>
+            </Slide>
+          </Grid>
       </Grid>
     </Container>
+    </Box>
   );
 }
 

@@ -34,10 +34,18 @@ const VoiceInput: React.FC<VoiceInputProps> = ({ onVoiceInput, onTranscriptFinal
 
   // Initialize Speech Recognition on component mount
   useEffect(() => {
+    console.log('🔍 Initializing Speech Recognition...');
+    console.log('Browser info:', { 
+      userAgent: navigator.userAgent,
+      speechRecognition: !!window.SpeechRecognition,
+      webkitSpeechRecognition: !!window.webkitSpeechRecognition
+    });
+    
     // Check if Web Speech API is supported
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     
     if (SpeechRecognition) {
+      console.log('✅ Speech Recognition API found');
       setIsSupported(true);
       recognitionRef.current = new SpeechRecognition();
       
@@ -46,6 +54,12 @@ const VoiceInput: React.FC<VoiceInputProps> = ({ onVoiceInput, onTranscriptFinal
       recognitionRef.current.interimResults = true;
       recognitionRef.current.maxAlternatives = 1;
       recognitionRef.current.lang = language === 'telugu' ? 'te-IN' : 'en-US';
+      
+      console.log('⚙️ Speech Recognition configured:', {
+        continuous: recognitionRef.current.continuous,
+        interimResults: recognitionRef.current.interimResults,
+        lang: recognitionRef.current.lang
+      });
       
       // Set up event handlers
       recognitionRef.current.onstart = () => {
@@ -83,12 +97,30 @@ const VoiceInput: React.FC<VoiceInputProps> = ({ onVoiceInput, onTranscriptFinal
       };
       
       recognitionRef.current.onerror = (event: any) => {
-        console.error('Speech recognition error:', event.error, event);
+        console.error('❌ Speech recognition error:', {
+          error: event.error,
+          message: event.message,
+          type: event.type,
+          target: event.target
+        });
         setIsListening(false);
+        
+        const errorMessages = {
+          'not-allowed': 'Microphone access denied. Please allow microphone access and try again.',
+          'no-speech': 'No speech detected. Please try speaking again.',
+          'audio-capture': 'No microphone found. Please connect a microphone.',
+          'network': 'Network error occurred. Please check your internet connection.',
+          'aborted': 'Speech recognition was aborted.',
+          'bad-grammar': 'Grammar error occurred.',
+          'language-not-supported': 'Selected language is not supported.'
+        };
+        
+        const errorMessage = errorMessages[event.error as keyof typeof errorMessages] || `Speech recognition error: ${event.error}`;
+        
         if (event.error === 'not-allowed') {
-          alert('Microphone access denied. Please allow microphone access and try again.');
-        } else if (event.error === 'no-speech') {
-          console.log('No speech detected');
+          alert(errorMessage);
+        } else {
+          console.warn('⚠️ Non-critical speech error:', errorMessage);
         }
       };
       
@@ -97,9 +129,11 @@ const VoiceInput: React.FC<VoiceInputProps> = ({ onVoiceInput, onTranscriptFinal
         setIsListening(false);
       };
     } else {
+      console.log('❌ Speech Recognition API not found');
       setIsSupported(false);
-      console.log('Speech recognition not supported');
     }
+    
+    console.log('🏁 Speech Recognition initialization complete. Supported:', isSupported);
     
     // Cleanup on unmount
     return () => {
@@ -119,36 +153,49 @@ const VoiceInput: React.FC<VoiceInputProps> = ({ onVoiceInput, onTranscriptFinal
   }, [language]);
 
   // Function to toggle listening state and start/stop speech recognition
-  const toggleListening = () => {
+  const toggleListening = async () => {
+    console.log('🎤 Toggle listening clicked. Current state:', { isSupported, isListening });
+    
     if (!isSupported || !recognitionRef.current) {
-      console.error('Speech recognition not supported');
+      console.error('❌ Speech recognition not supported or not initialized');
       alert('Speech recognition is not supported in this browser. Please use Chrome or Edge.');
       return;
     }
 
     if (isListening) {
       // Stop listening
-      console.log('Stopping speech recognition');
+      console.log('⏹️ Stopping speech recognition');
       recognitionRef.current.stop();
       setIsListening(false);
       setTranscript('');
     } else {
-      // Start listening
-      console.log('Starting speech recognition');
-      setTranscript('');
-      
-      // Update language before starting
-      const languageCode = language === 'telugu' ? 'te-IN' : 'en-US';
-      recognitionRef.current.lang = languageCode;
-      console.log('Set language to:', languageCode);
-      
+      // Check microphone permissions first
       try {
+        console.log('🔍 Checking microphone permissions...');
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        console.log('✅ Microphone permission granted');
+        stream.getTracks().forEach(track => track.stop()); // Stop the stream immediately
+        
+        // Start listening
+        console.log('🚀 Starting speech recognition');
+        setTranscript('');
+        
+        // Update language before starting
+        const languageCode = language === 'telugu' ? 'te-IN' : 'en-US';
+        recognitionRef.current.lang = languageCode;
+        console.log('🌐 Set language to:', languageCode);
+        
         recognitionRef.current.start();
-        console.log('Speech recognition start() called');
+        console.log('✅ Speech recognition start() called successfully');
       } catch (error) {
-        console.error('Error starting speech recognition:', error);
+        console.error('❌ Error starting speech recognition:', error);
         setIsListening(false);
-        alert('Failed to start speech recognition. Please try again.');
+        
+        if (error instanceof Error && error.name === 'NotAllowedError') {
+          alert('Microphone access denied. Please allow microphone access and try again.');
+        } else {
+          alert(`Failed to start speech recognition: ${error}`);
+        }
       }
     }
   };

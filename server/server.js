@@ -4,7 +4,10 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const http = require('http');
 const socketIo = require('socket.io');
-require('dotenv').config();
+const path = require('path');
+
+// Load environment variables from the server directory
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const connectDB = require('./config/database');
 const agentRoutes = require('./routes/agents');

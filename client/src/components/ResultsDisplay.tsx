@@ -140,7 +140,17 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results }) => {
   return (
     <Box>
       {/* Header with filters and actions */}
-      <Paper elevation={2} sx={{ p: 3, mb: 3, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+      <Paper 
+        elevation={2} 
+        sx={{ 
+          p: 3, 
+          mb: 3, 
+          background: 'rgba(102, 126, 234, 0.3)',
+          backdropFilter: 'blur(15px)',
+          border: '1px solid rgba(255, 255, 255, 0.2)',
+          borderRadius: 3,
+        }}
+      >
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Science sx={{ color: 'white', fontSize: 32 }} />
@@ -201,7 +211,17 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results }) => {
 
       {/* Results */}
       {filteredResults.length === 0 ? (
-        <Paper elevation={1} sx={{ p: 4, textAlign: 'center' }}>
+        <Paper 
+          elevation={1} 
+          sx={{ 
+            p: 4, 
+            textAlign: 'center',
+            background: 'rgba(255, 255, 255, 0.1)',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            borderRadius: 2,
+          }}
+        >
           <Science sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
           <Typography variant="h6" color="text.secondary">
             No results yet. Start a search to see AI agent discoveries.
@@ -216,7 +236,10 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results }) => {
               onChange={handleAccordionChange(`panel${index}`)}
               sx={{
                 mb: 2,
-                boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                background: 'rgba(255, 255, 255, 0.1)',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
                 '&:before': { display: 'none' },
                 borderRadius: '12px !important',
                 overflow: 'hidden'
