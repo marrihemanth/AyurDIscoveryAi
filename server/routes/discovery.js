@@ -186,7 +186,7 @@ async function processDiscoverySession(sessionId, query, language, voiceInput) {
       // Literature Agent
       (async () => {
         await updateAgentStatus(sessionId, 'literature', 'processing', 'Analyzing traditional literature...');
-        const result = await geminiService.analyzeLiterature(processedQuery, { language });
+        const result = await geminiService.processWithLiteratureAgent(processedQuery, { language });
         await updateAgentStatus(sessionId, 'literature', 'completed', null, result);
         return result;
       })(),
@@ -194,7 +194,7 @@ async function processDiscoverySession(sessionId, query, language, voiceInput) {
       // Compound Agent
       (async () => {
         await updateAgentStatus(sessionId, 'compound', 'processing', 'Analyzing molecular compounds...');
-        const result = await geminiService.analyzeCompound(processedQuery);
+        const result = await geminiService.processWithCompoundAgent(processedQuery);
         await updateAgentStatus(sessionId, 'compound', 'completed', null, result);
         return result;
       })(),
@@ -202,7 +202,7 @@ async function processDiscoverySession(sessionId, query, language, voiceInput) {
       // Research Agent
       (async () => {
         await updateAgentStatus(sessionId, 'research', 'processing', 'Searching research literature...');
-        const result = await geminiService.searchResearch(processedQuery);
+        const result = await geminiService.processWithResearchAgent(processedQuery);
         await updateAgentStatus(sessionId, 'research', 'completed', null, result);
         return result;
       })()
