@@ -1,14 +1,61 @@
 const express = require('express');
+const { body, validationResult } = require('express-validator');
 const router = express.Router();
-const geminiService = require('../services/geminiMultiAgent');
+const BedrockAIService = require('../services/bedrockMultiAgent');
 const DiscoverySession = require('../models/DiscoverySession');
 const Agent = require('../models/Agent');
 const { v4: uuidv4 } = require('uuid');
 
+// Initialize Bedrock AI Service
+const aiService = new BedrockAIService();
+
+// Using the 'express-validator' library, add a validation and sanitization chain to this route.
+// It should check that the 'query' field from the request body is not empty.
+// Then, it should sanitize the 'query' field by trimming whitespace and escaping special characters.
+// Add logic to return a 400 error if validation fails.
+const validateDiscoveryQuery = [
+  body('query')
+    .notEmpty()
+    .withMessage('Query is required and cannot be empty')
+    .isLength({ min: 2, max: 1000 })
+    .withMessage('Query must be between 2 and 1000 characters')
+    .trim() // Trim whitespace from beginning and end
+    .escape(), // Escape special characters to prevent XSS attacks
+  
+  body('language')
+    .optional()
+    .isIn(['en', 'te'])
+    .withMessage('Language must be either en (English) or te (Telugu)'),
+  
+  body('voiceInput')
+    .optional()
+    .isBoolean()
+    .withMessage('Voice input must be a boolean value')
+];
+
 // Start a new discovery session with multi-agent analysis
-router.post('/analyze', async (req, res) => {
+router.post('/analyze', validateDiscoveryQuery, async (req, res) => {
   try {
+    // Check for validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
     const { query, language = 'en', voiceInput = false } = req.body;
+    
+    // Additional security check: Reject queries that contain only special characters
+    const cleanQuery = query.replace(/[^\w\s]/gi, '').trim();
+    if (cleanQuery.length < 2) {
+      return res.status(400).json({
+        success: false,
+        message: 'Query must contain at least 2 alphanumeric characters'
+      });
+    }
     const sessionId = uuidv4();
     
     // Create new discovery session
@@ -149,7 +196,7 @@ router.post('/voice', async (req, res) => {
   try {
     const { transcript, language = 'en' } = req.body;
     
-    const result = await geminiService.processVoiceInput(transcript, language);
+    const result = await aiService.generateContent(transcript, 'research');
     
     res.json({
       success: true,
@@ -176,7 +223,7 @@ async function processDiscoverySession(sessionId, query, language, voiceInput) {
     let processedQuery = query;
     if (voiceInput) {
       await updateAgentStatus(sessionId, 'voice', 'processing', 'Processing voice input...');
-      const voiceResult = await geminiService.processVoiceInput(query, language);
+      const voiceResult = await aiService.generateContent(query, 'research');
       processedQuery = voiceResult.processed || query;
       await updateAgentStatus(sessionId, 'voice', 'completed', null, voiceResult);
     }
@@ -186,7 +233,7 @@ async function processDiscoverySession(sessionId, query, language, voiceInput) {
       // Literature Agent
       (async () => {
         await updateAgentStatus(sessionId, 'literature', 'processing', 'Analyzing traditional literature...');
-        const result = await geminiService.analyzeLiterature(processedQuery, { language });
+        const result = await aiService.analyzeLiterature(processedQuery);
         await updateAgentStatus(sessionId, 'literature', 'completed', null, result);
         return result;
       })(),
@@ -194,7 +241,7 @@ async function processDiscoverySession(sessionId, query, language, voiceInput) {
       // Compound Agent
       (async () => {
         await updateAgentStatus(sessionId, 'compound', 'processing', 'Analyzing molecular compounds...');
-        const result = await geminiService.analyzeCompound(processedQuery);
+        const result = await aiService.analyzeCompounds(processedQuery);
         await updateAgentStatus(sessionId, 'compound', 'completed', null, result);
         return result;
       })(),
@@ -202,7 +249,7 @@ async function processDiscoverySession(sessionId, query, language, voiceInput) {
       // Research Agent
       (async () => {
         await updateAgentStatus(sessionId, 'research', 'processing', 'Searching research literature...');
-        const result = await geminiService.searchResearch(processedQuery);
+        const result = await aiService.synthesizeResearch(processedQuery);
         await updateAgentStatus(sessionId, 'research', 'completed', null, result);
         return result;
       })()
@@ -210,7 +257,7 @@ async function processDiscoverySession(sessionId, query, language, voiceInput) {
     
     // Coordinator Agent - synthesize results
     await updateAgentStatus(sessionId, 'coordinator', 'processing', 'Synthesizing results...');
-    const coordinatorResult = await geminiService.coordinateAnalysis(
+    const coordinatorResult = await aiService.coordinateAnalysis(
       literatureResult, compoundResult, researchResult, processedQuery
     );
     await updateAgentStatus(sessionId, 'coordinator', 'completed', null, coordinatorResult);
@@ -234,23 +281,27 @@ async function processDiscoverySession(sessionId, query, language, voiceInput) {
 // Helper functions
 async function updateAgentStatus(sessionId, agentType, status, task = null, results = null) {
   try {
-    if (!process.env.MONGODB_URI) return; // Skip in demo mode
-    
+    // Always try to update agent status, with fallback if database unavailable
     const update = {
       status,
       lastUpdate: new Date(),
       ...(task && { currentTask: task }),
       ...(results && { 
-        results,
+        results: results, // Store as 'results' field (matches model)
         confidence: results.confidence || 0,
         processingTime: results.processingTime || 0
       })
     };
-    
-    await Agent.findOneAndUpdate(
-      { sessionId, type: agentType },
-      update
-    );
+
+    if (process.env.MONGODB_URI) {
+      await Agent.findOneAndUpdate(
+        { sessionId, type: agentType },
+        update
+      );
+      console.log(`✅ Updated ${agentType} agent: ${status}${results ? ' (with results)' : ''}`);
+    } else {
+      console.log(`⚠️  Demo mode: ${agentType} agent ${status}${results ? ' (results generated but not stored)' : ''}`);
+    }
   } catch (error) {
     console.error('Agent status update error:', error);
   }

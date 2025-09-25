@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Typography,
   Button,
@@ -14,51 +14,200 @@ import { Mic, MicOff } from '@mui/icons-material';
 
 interface VoiceInputProps {
   onVoiceInput: (text: string, type: string) => void;
+  onTranscriptFinalized: (transcript: string) => void;
 }
 
-const VoiceInput: React.FC<VoiceInputProps> = ({ onVoiceInput }) => {
+// Extend Window interface for SpeechRecognition
+declare global {
+  interface Window {
+    SpeechRecognition: any;
+    webkitSpeechRecognition: any;
+  }
+}
+
+const VoiceInput: React.FC<VoiceInputProps> = ({ onVoiceInput, onTranscriptFinalized }) => {
   const [isListening, setIsListening] = useState(false);
   const [language, setLanguage] = useState('english');
   const [transcript, setTranscript] = useState('');
-  const [isSupported, setIsSupported] = useState(true);
+  const [isSupported, setIsSupported] = useState(false);
+  const recognitionRef = useRef<any>(null);
 
-  const startListening = () => {
-    // Mock voice recognition for demo purposes
-    setIsListening(true);
-    setTranscript('');
+  // Initialize Speech Recognition on component mount
+  useEffect(() => {
+    console.log('🔍 Initializing Speech Recognition...');
+    console.log('Browser info:', { 
+      userAgent: navigator.userAgent,
+      speechRecognition: !!window.SpeechRecognition,
+      webkitSpeechRecognition: !!window.webkitSpeechRecognition
+    });
     
-    // Simulate voice recognition
-    setTimeout(() => {
-      const mockTranscripts = {
-        english: [
-          'Search for turmeric compounds',
-          'Find research on ashwagandha',
-          'Analyze neem medicinal properties',
-          'Study tulsi therapeutic effects'
-        ],
-        telugu: [
-          'పసుపు సమ్మేళనాలను వెతకండి',
-          'అశ్వగంధపై పరిశోధనను కనుగొనండి',
-          'వేప వైద్య లక్షణాలను విశ్లేషించండి'
-        ]
+    // Check if Web Speech API is supported
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    
+    if (SpeechRecognition) {
+      console.log('✅ Speech Recognition API found');
+      setIsSupported(true);
+      recognitionRef.current = new SpeechRecognition();
+      
+      // Configure speech recognition
+      recognitionRef.current.continuous = false; // Change to false for better control
+      recognitionRef.current.interimResults = true;
+      recognitionRef.current.maxAlternatives = 1;
+      recognitionRef.current.lang = language === 'telugu' ? 'te-IN' : 'en-US';
+      
+      console.log('⚙️ Speech Recognition configured:', {
+        continuous: recognitionRef.current.continuous,
+        interimResults: recognitionRef.current.interimResults,
+        lang: recognitionRef.current.lang
+      });
+      
+      // Set up event handlers
+      recognitionRef.current.onstart = () => {
+        console.log('Speech recognition started');
+        setIsListening(true);
       };
       
-      const transcripts = mockTranscripts[language as keyof typeof mockTranscripts];
-      const randomTranscript = transcripts[Math.floor(Math.random() * transcripts.length)];
+      recognitionRef.current.onresult = (event: any) => {
+        console.log('Speech recognition result received:', event);
+        let finalTranscript = '';
+        let interimTranscript = '';
+        
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcriptText = event.results[i][0].transcript;
+          console.log(`Result ${i}: "${transcriptText}" (final: ${event.results[i].isFinal})`);
+          
+          if (event.results[i].isFinal) {
+            finalTranscript += transcriptText;
+          } else {
+            interimTranscript += transcriptText;
+          }
+        }
+        
+        // Update transcript state with interim and final results
+        const currentTranscript = finalTranscript + interimTranscript;
+        console.log('Current transcript:', currentTranscript);
+        setTranscript(currentTranscript);
+        
+        // If we have a final result, process it
+        if (finalTranscript.trim()) {
+          console.log('Final transcript:', finalTranscript.trim());
+          onTranscriptFinalized(finalTranscript.trim());
+          onVoiceInput(finalTranscript.trim(), 'comprehensive');
+        }
+      };
       
-      setTranscript(randomTranscript);
+      recognitionRef.current.onerror = (event: any) => {
+        console.error('❌ Speech recognition error:', {
+          error: event.error,
+          message: event.message,
+          type: event.type,
+          target: event.target
+        });
+        setIsListening(false);
+        
+        const errorMessages = {
+          'not-allowed': 'Microphone access denied. Please allow microphone access and try again.',
+          'no-speech': 'No speech detected. Please try speaking again.',
+          'audio-capture': 'No microphone found. Please connect a microphone.',
+          'network': 'Network error occurred. Please check your internet connection.',
+          'aborted': 'Speech recognition was aborted.',
+          'bad-grammar': 'Grammar error occurred.',
+          'language-not-supported': 'Selected language is not supported.'
+        };
+        
+        const errorMessage = errorMessages[event.error as keyof typeof errorMessages] || `Speech recognition error: ${event.error}`;
+        
+        if (event.error === 'not-allowed') {
+          alert(errorMessage);
+        } else {
+          console.warn('⚠️ Non-critical speech error:', errorMessage);
+        }
+      };
+      
+      recognitionRef.current.onend = () => {
+        console.log('Speech recognition ended');
+        setIsListening(false);
+      };
+    } else {
+      console.log('❌ Speech Recognition API not found');
+      setIsSupported(false);
+    }
+    
+    console.log('🏁 Speech Recognition initialization complete. Supported:', isSupported);
+    
+    // Cleanup on unmount
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+    };
+  }, [onVoiceInput, onTranscriptFinalized]);
+
+  // Update language when language selection changes
+  useEffect(() => {
+    if (recognitionRef.current) {
+      const languageCode = language === 'telugu' ? 'te-IN' : 'en-US';
+      recognitionRef.current.lang = languageCode;
+      console.log('Language updated to:', languageCode);
+    }
+  }, [language]);
+
+  // Function to toggle listening state and start/stop speech recognition
+  const toggleListening = async () => {
+    console.log('🎤 Toggle listening clicked. Current state:', { isSupported, isListening });
+    
+    if (!isSupported || !recognitionRef.current) {
+      console.error('❌ Speech recognition not supported or not initialized');
+      alert('Speech recognition is not supported in this browser. Please use Chrome or Edge.');
+      return;
+    }
+
+    if (isListening) {
+      // Stop listening
+      console.log('⏹️ Stopping speech recognition');
+      recognitionRef.current.stop();
       setIsListening(false);
-      
-      // Auto-submit after a delay
-      setTimeout(() => {
-        onVoiceInput(randomTranscript, 'voice');
+      setTranscript('');
+    } else {
+      // Check microphone permissions first
+      try {
+        console.log('🔍 Checking microphone permissions...');
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        console.log('✅ Microphone permission granted');
+        stream.getTracks().forEach(track => track.stop()); // Stop the stream immediately
+        
+        // Start listening
+        console.log('🚀 Starting speech recognition');
         setTranscript('');
-      }, 1000);
-    }, 3000);
+        
+        // Update language before starting
+        const languageCode = language === 'telugu' ? 'te-IN' : 'en-US';
+        recognitionRef.current.lang = languageCode;
+        console.log('🌐 Set language to:', languageCode);
+        
+        recognitionRef.current.start();
+        console.log('✅ Speech recognition start() called successfully');
+      } catch (error) {
+        console.error('❌ Error starting speech recognition:', error);
+        setIsListening(false);
+        
+        if (error instanceof Error && error.name === 'NotAllowedError') {
+          alert('Microphone access denied. Please allow microphone access and try again.');
+        } else {
+          alert(`Failed to start speech recognition: ${error}`);
+        }
+      }
+    }
+  };
+
+  const startListening = () => {
+    toggleListening();
   };
 
   const stopListening = () => {
-    setIsListening(false);
+    if (recognitionRef.current && isListening) {
+      recognitionRef.current.stop();
+    }
   };
 
   return (
@@ -84,7 +233,7 @@ const VoiceInput: React.FC<VoiceInputProps> = ({ onVoiceInput }) => {
           variant={isListening ? "outlined" : "contained"}
           color={isListening ? "secondary" : "primary"}
           startIcon={isListening ? <MicOff /> : <Mic />}
-          onClick={isListening ? stopListening : startListening}
+          onClick={toggleListening}
           disabled={!isSupported}
         >
           {isListening ? 'Stop Listening' : 'Start Voice Input'}

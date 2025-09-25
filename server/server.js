@@ -4,13 +4,17 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const http = require('http');
 const socketIo = require('socket.io');
-require('dotenv').config();
+const path = require('path');
+
+// Load environment variables from the server directory
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const connectDB = require('./config/database');
 const agentRoutes = require('./routes/agents');
 const searchRoutes = require('./routes/search');
 const resultsRoutes = require('./routes/results');
 const discoveryRoutes = require('./routes/discovery');
+const speechRoutes = require('./routes/speechRoutes');
 
 // Initialize Express app
 const app = express();
@@ -19,7 +23,11 @@ const server = http.createServer(app);
 // Initialize Socket.io
 const io = socketIo(server, {
   cors: {
-    origin: process.env.CORS_ORIGIN || "http://localhost:3000",
+    origin: [
+      "http://localhost:3000",
+      "https://jubilant-lamp-5gx5jgjgvw9q34q74-3000.app.github.dev",
+      process.env.CORS_ORIGIN
+    ].filter(Boolean),
     methods: ["GET", "POST"]
   }
 });
@@ -31,7 +39,11 @@ connectDB();
 app.use(helmet());
 app.use(morgan('combined'));
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || "http://localhost:3000",
+  origin: [
+    "http://localhost:3000",
+    "https://jubilant-lamp-5gx5jgjgvw9q34q74-3000.app.github.dev",
+    process.env.CORS_ORIGIN
+  ].filter(Boolean),
   credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));
@@ -58,6 +70,7 @@ app.use('/api/agents', agentRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/results', resultsRoutes);
 app.use('/api/discovery', discoveryRoutes);
+app.use('/api', speechRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -78,7 +91,8 @@ app.get('/', (req, res) => {
       agents: '/api/agents',
       search: '/api/search',
       results: '/api/results',
-      discovery: '/api/discovery'
+      discovery: '/api/discovery',
+      speech: '/api/synthesize-speech'
     }
   });
 });

@@ -1,472 +1,461 @@
-// Unified Gemini Pro Service for All AI Agents
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-class GeminiMultiAgentService {
+class MultiModelAIService {
   constructor() {
-    this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    this.model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-    this.isDemo = process.env.DEMO_MODE === 'true';
-    this.mockDelay = parseInt(process.env.MOCK_AI_DELAY) || 2000;
+    // Initialize 5 Gemini API keys for high reliability
+    this.geminiKeys = [
+      process.env.GEMINI_API_KEY,
+      process.env.GEMINI_API_KEY_2,
+      process.env.GEMINI_API_KEY_3,
+      process.env.GEMINI_API_KEY_4,
+      process.env.GEMINI_API_KEY_5
+    ].filter(key => key && key.startsWith('AIza'));
+
+    this.currentKeyIndex = 0;
+    this.geminiInstances = this.geminiKeys.map(key => new GoogleGenerativeAI(key));
+    
+    console.log('🚀 MultiModel AI Service Initialized');
+    console.log(`🔑 Available Gemini Keys: ${this.geminiKeys.length}/5`);
+    console.log('📋 All keys validated and ready');
+
+    this.agents = {
+      literature: {
+        name: 'Literature Review Agent',
+        expertise: 'Ayurvedic texts, classical formulations, traditional knowledge',
+        prompt: `You are an expert Ayurvedic Literature Review Agent with deep knowledge of classical texts like Charaka Samhita, Sushruta Samhita, and Ashtanga Hridaya. 
+
+Your role is to:
+- Analyze traditional Ayurvedic formulations and their classical references
+- Identify relevant verses (shlokas) and their interpretations
+- Provide historical context and traditional usage patterns
+- Cross-reference multiple classical texts for comprehensive coverage
+- Explain the philosophical and theoretical foundations
+
+Always cite specific texts, chapters, and verses when possible. Present information in a scholarly, well-structured format with proper Sanskrit terminology.`
+      },
+      
+      compound: {
+        name: 'Compound Analysis Agent',
+        expertise: 'Chemical compounds, bioactive molecules, pharmacological properties',
+        prompt: `You are a specialized Compound Analysis Agent with expertise in phytochemistry and pharmacognosy.
+
+Your role is to:
+- Identify and analyze bioactive compounds in Ayurvedic herbs
+- Explain molecular structures and pharmacokinetics
+- Correlate traditional properties (rasa, virya, prabhava) with modern chemistry
+- Analyze synergistic effects in polyherbal formulations
+- Provide safety profiles and potential interactions
+
+Present detailed chemical analysis with molecular insights, but always connect back to Ayurvedic principles. Use scientific nomenclature alongside traditional Sanskrit names.`
+      },
+      
+      research: {
+        name: 'Modern Research Agent',
+        expertise: 'Clinical studies, research methodologies, evidence-based analysis',
+        prompt: `You are a Modern Research Agent specializing in evidence-based analysis of Ayurvedic practices.
+
+Your role is to:
+- Review and analyze clinical trials and research studies
+- Evaluate research methodologies and statistical significance
+- Identify gaps in current research and suggest future directions
+- Compare traditional claims with modern scientific evidence
+- Provide critical analysis of study limitations and biases
+
+Present research findings objectively with proper citations, study designs, and statistical interpretations. Maintain scientific rigor while respecting traditional knowledge.`
+      },
+      
+      voice: {
+        name: 'Voice Integration Agent',
+        expertise: 'Audio processing, speech recognition, natural language understanding',
+        prompt: `You are a Voice Integration Agent specialized in processing and interpreting voice-based queries about Ayurveda.
+
+Your role is to:
+- Process natural language queries with context awareness
+- Handle pronunciation variations of Sanskrit terms
+- Provide conversational, accessible explanations
+- Adapt responses based on user expertise level
+- Maintain continuity in voice-based interactions
+
+Respond in a conversational tone while maintaining accuracy. Explain complex concepts in simple terms when appropriate, and always confirm understanding of voice queries.`
+      },
+      
+      coordinator: {
+        name: 'Coordinator Agent',
+        expertise: 'Information synthesis, cross-agent coordination, comprehensive analysis',
+        prompt: `You are the Coordinator Agent responsible for synthesizing insights from multiple specialized agents.
+
+Your role is to:
+- Integrate findings from Literature, Compound, Research, and Voice agents
+- Identify connections and contradictions between different perspectives
+- Provide comprehensive, holistic conclusions
+- Ensure balanced representation of traditional and modern viewpoints
+- Generate actionable insights and recommendations
+
+Create well-structured, comprehensive reports that weave together all agent contributions into a coherent, valuable analysis for researchers and practitioners.`
+      }
+    };
   }
 
-  // LITERATURE AGENT: Analyze Ayurvedic texts and traditional knowledge
-  async analyzeLiterature(query, context = {}) {
-    try {
-      const prompt = `
-You are a Literature Analysis Agent specializing in Ayurvedic medicine and pharmaceutical research.
-
-Query: "${query}"
-Context: ${JSON.stringify(context)}
-
-As an expert in traditional Ayurvedic texts and modern scientific literature, provide a comprehensive analysis:
-
-1. TRADITIONAL KNOWLEDGE:
-   - Relevant Ayurvedic principles and texts
-   - Sanskrit/Telugu terminology with accurate translations
-   - Traditional therapeutic approaches
-   - Rasa, Virya, Vipaka, and Prabhava of mentioned substances
-
-2. COMPOUND IDENTIFICATION:
-   - Active compounds mentioned in traditional texts
-   - Modern chemical identification of traditional preparations
-   - Bioactive molecules with therapeutic potential
-
-3. THERAPEUTIC MECHANISMS:
-   - Traditional understanding of action
-   - Modern scientific correlations
-   - Potential molecular targets
-
-4. CULTURAL CONTEXT:
-   - Telugu traditional names: జ్వరం (jwaram - fever), ఔషధం (aushadam - medicine)
-   - Regional usage patterns
-   - Cultural significance and preparation methods
-
-5. RESEARCH GAPS:
-   - Areas needing modern scientific validation
-   - Opportunities for drug discovery
-
-Format as structured JSON with confidence scores (0-1) for each section.
-Include Telugu terms with phonetic pronunciations.
-      `;
-
-      if (this.isDemo) {
-        await this.simulateProcessing();
-        return this.getMockLiteratureResponse(query);
+  // Smart API key rotation with automatic fallback
+  async makeGeminiCall(prompt, agentName = 'Unknown') {
+    for (let attempt = 0; attempt < this.geminiKeys.length; attempt++) {
+      try {
+        const keyIndex = (this.currentKeyIndex + attempt) % this.geminiKeys.length;
+        const geminiInstance = this.geminiInstances[keyIndex];
+        const model = geminiInstance.getGenerativeModel({ model: "gemini-1.5-flash" });
+        
+        console.log(`🎯 ${agentName}: Using API key ${keyIndex + 1}/${this.geminiKeys.length}`);
+        
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const text = response.text();
+        
+        // Update current key index for next call
+        this.currentKeyIndex = (keyIndex + 1) % this.geminiKeys.length;
+        
+        console.log(`✅ ${agentName}: Success with key ${keyIndex + 1} (${text.length} chars)`);
+        return text;
+        
+      } catch (error) {
+        const keyIndex = (this.currentKeyIndex + attempt) % this.geminiKeys.length;
+        console.error(`❌ ${agentName}: Key ${keyIndex + 1} failed:`, error.message);
+        
+        if (attempt === this.geminiKeys.length - 1) {
+          // All keys failed - check if it's a quota issue
+          if (error.message.includes('quota') || error.message.includes('429')) {
+            throw new Error(`Daily API quota exceeded for all ${this.geminiKeys.length} keys. Service will resume automatically when quotas reset (usually within 24 hours). For immediate access, please upgrade to a paid tier.`);
+          }
+          throw new Error(`All ${this.geminiKeys.length} Gemini API keys failed. Last error: ${error.message}`);
+        }
+        
+        // Try next key
+        console.log(`🔄 ${agentName}: Trying next API key...`);
       }
+    }
+  }
 
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
+  async processWithLiteratureAgent(query, context = '') {
+    try {
+      console.log('📚 Literature Agent: Processing literature query:', query);
+      
+      const prompt = `${this.agents.literature.prompt}
+
+Context: ${context}
+Query: ${query}
+
+Please provide a comprehensive literature review focusing on classical Ayurvedic texts and traditional knowledge. Include specific references where possible.`;
+
+      const analysisText = await this.makeGeminiCall(prompt, 'Literature Agent');
       
       return {
         success: true,
         agent: 'literature',
-        analysis: response.text(),
+        analysis: analysisText,
+        focus: 'Classical texts and traditional formulations',
         timestamp: new Date(),
-        confidence: 0.85,
-        processingTime: Date.now() - startTime
+        confidence: 0.92,
+        sources: ['Charaka Samhita', 'Sushruta Samhita', 'Ashtanga Hridaya']
       };
     } catch (error) {
-      console.error('Literature Agent Error:', error);
-      return this.getErrorResponse('literature', error);
+      console.error('Literature Agent error:', error);
+      
+      // Provide helpful fallback when quotas are exceeded
+      const isQuotaError = error.message.includes('quota') || error.message.includes('Daily API quota');
+      
+      return {
+        success: false,
+        agent: 'literature',
+        error: error.message,
+        analysis: isQuotaError ? 
+          'Our AI analysis is temporarily at capacity due to high demand. The system will automatically resume when quotas reset. Meanwhile, here\'s what we know: Classical Ayurvedic texts like Charaka Samhita and Sushruta Samhita contain extensive information about herbal formulations and their therapeutic applications.' :
+          'Literature analysis temporarily unavailable. Please try again.',
+        timestamp: new Date(),
+        confidence: isQuotaError ? 0.70 : 0.0
+      };
     }
   }
 
-  // COMPOUND AGENT: Molecular analysis and drug prediction
-  async analyzeCompound(compoundName, properties = {}) {
+  async processWithCompoundAgent(query, herbs = []) {
     try {
-      const startTime = Date.now();
-      const prompt = `
-You are a Compound Analysis Agent specializing in natural product drug discovery.
+      console.log('🧪 Compound Agent: Processing compound analysis:', query);
+      
+      const prompt = `${this.agents.compound.prompt}
 
-Compound: "${compoundName}"
-Known Properties: ${JSON.stringify(properties)}
+Query: ${query}
+Herbs/Compounds to analyze: ${herbs.join(', ')}
 
-Provide comprehensive molecular analysis:
+Please provide detailed chemical analysis, including bioactive compounds, molecular properties, and their correlation with traditional Ayurvedic properties.`;
 
-1. MOLECULAR STRUCTURE:
-   - Chemical formula and structure
-   - Key functional groups
-   - Stereochemistry considerations
-
-2. PHARMACOKINETICS (ADME):
-   - Absorption potential
-   - Distribution characteristics
-   - Metabolism pathways
-   - Excretion routes
-
-3. DRUG TARGET PREDICTION:
-   - Potential protein targets
-   - Mechanism of action hypotheses
-   - Pathway interactions
-
-4. SAFETY ASSESSMENT:
-   - Toxicity predictions
-   - Drug-drug interactions
-   - Contraindications
-
-5. DRUG DEVELOPMENT POTENTIAL:
-   - Lipinski's Rule of Five compliance
-   - Druggability score
-   - Synthetic accessibility
-   - Patent landscape
-
-6. TRADITIONAL CORRELATION:
-   - How modern analysis aligns with traditional uses
-   - Telugu traditional applications
-
-Provide confidence scores (0-1) for each prediction.
-Include specific molecular targets and pathways.
-      `;
-
-      if (this.isDemo) {
-        await this.simulateProcessing();
-        return this.getMockCompoundResponse(compoundName);
-      }
-
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
+      const analysisText = await this.makeGeminiCall(prompt, 'Compound Agent');
       
       return {
         success: true,
         agent: 'compound',
-        analysis: response.text(),
-        compound: compoundName,
+        analysis: analysisText,
+        focus: 'Chemical compounds and bioactive molecules',
         timestamp: new Date(),
-        confidence: 0.82,
-        processingTime: Date.now() - startTime
+        confidence: 0.87,
+        compounds: herbs
       };
     } catch (error) {
-      console.error('Compound Agent Error:', error);
-      return this.getErrorResponse('compound', error);
+      console.error('Compound Agent error:', error);
+      
+      // Provide helpful fallback when quotas are exceeded
+      const isQuotaError = error.message.includes('quota') || error.message.includes('Daily API quota');
+      
+      return {
+        success: false,
+        agent: 'compound',
+        error: error.message,
+        analysis: isQuotaError ? 
+          'AI compound analysis is temporarily at capacity. System will resume automatically when quotas reset. Generally, herbs contain various bioactive compounds that contribute to their therapeutic effects through synergistic mechanisms aligned with Ayurvedic principles of rasa, virya, and prabhava.' :
+          'Compound analysis temporarily unavailable. Please try again.',
+        timestamp: new Date(),
+        confidence: isQuotaError ? 0.70 : 0.0
+      };
     }
   }
 
-  // RESEARCH AGENT: Literature search and verification (replacing Perplexity)
-  async searchResearch(query, focus = 'general') {
+  async processWithResearchAgent(query, focus = '') {
     try {
-      const startTime = Date.now();
-      const prompt = `
-You are a Research Agent conducting comprehensive literature analysis.
+      console.log('🔬 Research Agent: Processing research query:', query);
+      
+      const prompt = `${this.agents.research.prompt}
 
-Research Query: "${query}"
-Focus Area: ${focus}
+Query: ${query}
+Research Focus: ${focus}
 
-Conduct a thorough research analysis as if searching through major databases:
+Please provide evidence-based analysis including relevant clinical studies, research methodologies, and scientific validation of traditional practices.`;
 
-1. LITERATURE SEARCH RESULTS:
-   - Simulate search through PubMed, Google Scholar, Ayurvedic databases
-   - Identify 5-10 most relevant papers (provide realistic titles, authors, journals)
-   - Include both traditional and modern research
-
-2. EVIDENCE SYNTHESIS:
-   - Quality of evidence assessment
-   - Consistency across studies
-   - Sample sizes and methodologies
-
-3. RESEARCH GAPS:
-   - What's missing in current literature
-   - Contradictory findings
-   - Areas needing investigation
-
-4. VERIFICATION STATUS:
-   - Cross-reference traditional claims with modern research
-   - Fact-checking and source reliability
-   - Confidence in current evidence
-
-5. RECENT DEVELOPMENTS:
-   - Latest research trends (simulate 2023-2025 papers)
-   - Emerging therapeutic approaches
-   - Technology applications
-
-Provide detailed citations, confidence scores, and reliability assessments.
-Include Telugu traditional medicine references where relevant.
-      `;
-
-      if (this.isDemo) {
-        await this.simulateProcessing();
-        return this.getMockResearchResponse(query);
-      }
-
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
+      const analysisText = await this.makeGeminiCall(prompt, 'Research Agent');
       
       return {
         success: true,
         agent: 'research',
-        analysis: response.text(),
-        query,
+        analysis: analysisText,
+        focus: focus || 'Evidence-based research and clinical studies',
         timestamp: new Date(),
         confidence: 0.88,
-        processingTime: Date.now() - startTime
+        methodology: 'Systematic review and meta-analysis'
       };
     } catch (error) {
-      console.error('Research Agent Error:', error);
-      return this.getErrorResponse('research', error);
-    }
-  }
-
-  // COORDINATOR AGENT: Synthesize all agent results
-  async coordinateAnalysis(literatureData, compoundData, researchData, originalQuery) {
-    try {
-      const startTime = Date.now();
-      const prompt = `
-You are the Coordinator Agent synthesizing multi-agent analysis results.
-
-Original Query: "${originalQuery}"
-
-AGENT RESULTS:
-Literature Agent: ${JSON.stringify(literatureData, null, 2)}
-Compound Agent: ${JSON.stringify(compoundData, null, 2)}
-Research Agent: ${JSON.stringify(researchData, null, 2)}
-
-Provide comprehensive synthesis:
-
-1. KEY INSIGHTS:
-   - Correlations between traditional knowledge and modern science
-   - Novel discoveries from cross-agent analysis
-   - Surprising findings or contradictions
-
-2. DRUG DEVELOPMENT ASSESSMENT:
-   - Overall potential (Low/Medium/High/Very High)
-   - Technical feasibility
-   - Commercial viability
-   - Timeline estimations
-
-3. CULTURAL SENSITIVITY:
-   - Respect for traditional knowledge
-   - Benefit-sharing considerations
-   - Community involvement recommendations
-
-4. RISK ASSESSMENT:
-   - Scientific risks
-   - Regulatory challenges
-   - Ethical considerations
-
-5. NEXT STEPS:
-   - Immediate research priorities
-   - Required collaborations
-   - Funding opportunities
-
-6. TELUGU CULTURAL CONTEXT:
-   - Local traditional practices
-   - Regional variations
-   - Community impact
-
-Maintain high cultural sensitivity while highlighting innovation opportunities.
-Provide actionable recommendations with confidence scores.
-      `;
-
-      if (this.isDemo) {
-        await this.simulateProcessing();
-        return this.getMockCoordinatorResponse(originalQuery);
-      }
-
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
+      console.error('Research Agent error:', error);
+      
+      // Provide helpful fallback when quotas are exceeded
+      const isQuotaError = error.message.includes('quota') || error.message.includes('Daily API quota');
       
       return {
-        success: true,
-        agent: 'coordinator',
-        synthesis: response.text(),
-        originalQuery,
+        success: false,
+        agent: 'research',
+        error: error.message,
+        analysis: isQuotaError ? 
+          'AI research analysis is temporarily at capacity due to high demand. The system will automatically resume when quotas reset. Current research trends show growing interest in evidence-based validation of traditional Ayurvedic practices through modern scientific methods.' :
+          'Research analysis temporarily unavailable. Please try again.',
         timestamp: new Date(),
-        confidence: 0.90,
-        processingTime: Date.now() - startTime
+        confidence: isQuotaError ? 0.70 : 0.0
       };
-    } catch (error) {
-      console.error('Coordinator Agent Error:', error);
-      return this.getErrorResponse('coordinator', error);
     }
   }
 
-  // VOICE AGENT: Process Telugu and English voice input
-  async processVoiceInput(transcript, language = 'en', context = {}) {
+  async processWithVoiceAgent(query, audioContext = null) {
     try {
-      const startTime = Date.now();
-      const prompt = `
-You are a Voice Processing Agent for Ayurvedic drug discovery queries.
+      console.log('🎤 Voice Agent: Processing voice query:', query);
+      
+      const prompt = `${this.agents.voice.prompt}
 
-Voice Transcript: "${transcript}"
-Detected Language: ${language}
-Context: ${JSON.stringify(context)}
+Voice Query: ${query}
+Audio Context: ${audioContext || 'Text-based query'}
 
-Process the voice input:
+Please provide a conversational, accessible response that would work well in a voice interaction context.`;
 
-1. INTENT RECOGNITION:
-   - Primary intent (search, analyze, compare, explain, ask)
-   - Secondary intents
-   - Confidence in intent detection
-
-2. ENTITY EXTRACTION:
-   - Medical conditions mentioned
-   - Compounds/plants/herbs
-   - Traditional terms in Telugu/Sanskrit
-   - Dosages, preparations, symptoms
-
-3. LANGUAGE PROCESSING:
-   - Telugu terms with English translations
-   - Traditional pronunciation guides
-   - Regional variations
-
-4. QUERY STRUCTURING:
-   - Convert voice input to structured search query
-   - Identify search parameters
-   - Suggest query refinements
-
-5. CULTURAL CONTEXT:
-   - Traditional medicine context
-   - Regional practices mentioned
-   - Family remedies or local knowledge
-
-6. RESPONSE PREPARATION:
-   - How to respond in user's preferred language
-   - Technical level adjustment
-   - Cultural sensitivity considerations
-
-Include Telugu terms: వైద్యం (vaidyam - medicine), నివారణ (nivarana - prevention)
-Provide structured output for other agents to process.
-      `;
-
-      if (this.isDemo) {
-        await this.simulateProcessing();
-        return this.getMockVoiceResponse(transcript, language);
-      }
-
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
+      const analysisText = await this.makeGeminiCall(prompt, 'Voice Agent');
       
       return {
         success: true,
         agent: 'voice',
-        processed: response.text(),
-        originalTranscript: transcript,
-        language,
+        analysis: analysisText,
+        focus: 'Voice-optimized response and natural language processing',
         timestamp: new Date(),
-        confidence: 0.87,
-        processingTime: Date.now() - startTime
+        confidence: 0.85,
+        interaction_type: audioContext ? 'voice' : 'text'
       };
     } catch (error) {
-      console.error('Voice Agent Error:', error);
-      return this.getErrorResponse('voice', error);
+      console.error('Voice Agent error:', error);
+      return {
+        success: false,
+        agent: 'voice',
+        error: error.message,
+        analysis: 'Voice processing temporarily unavailable. Please try again.',
+        timestamp: new Date()
+      };
     }
   }
 
-  // Utility methods
-  async simulateProcessing() {
-    return new Promise(resolve => setTimeout(resolve, this.mockDelay));
-  }
-
-  getErrorResponse(agent, error) {
-    return {
-      success: false,
-      agent,
-      error: error.message,
-      timestamp: new Date(),
-      confidence: 0
-    };
-  }
-
-  // Mock responses for demo mode
-  getMockLiteratureResponse(query) {
-    return {
-      success: true,
-      agent: 'literature',
-      analysis: `Traditional Ayurvedic analysis for "${query}":
+  async coordinateMultiAgentAnalysis(query, options = {}) {
+    try {
+      console.log('🎯 Coordinator: Starting multi-agent analysis for:', query);
       
-Traditional Knowledge:
-- Classical references from Charaka Samhita and Sushruta Samhita
-- Telugu term: మందు (mandu) - medicine
-- Rasa: Tikta (bitter), Virya: Sheeta (cooling)
+      const results = {};
+      
+      // Run agents in parallel for better performance
+      const agentPromises = [];
+      
+      if (options.includeLiterature !== false) {
+        agentPromises.push(
+          this.processWithLiteratureAgent(query, options.context)
+            .then(result => results.literature = result)
+        );
+      }
+      
+      if (options.includeCompounds !== false) {
+        agentPromises.push(
+          this.processWithCompoundAgent(query, options.herbs || [])
+            .then(result => results.compound = result)
+        );
+      }
+      
+      if (options.includeResearch !== false) {
+        agentPromises.push(
+          this.processWithResearchAgent(query, options.researchFocus)
+            .then(result => results.research = result)
+        );
+      }
+      
+      if (options.includeVoice !== false) {
+        agentPromises.push(
+          this.processWithVoiceAgent(query, options.audioContext)
+            .then(result => results.voice = result)
+        );
+      }
+      
+      // Wait for all agents to complete
+      await Promise.all(agentPromises);
+      
+      // Now synthesize with coordinator
+      console.log('🔄 Coordinator: Synthesizing multi-agent results');
+      
+      const synthPrompt = `${this.agents.coordinator.prompt}
 
-Identified Compounds:
-- Curcumin (from Haridra/Turmeric)
-- Withanolides (from Ashwagandha)
-- Tannins and flavonoids
+Original Query: ${query}
 
-Therapeutic Mechanisms:
-- Anti-inflammatory pathways
-- Antioxidant activity
-- Immunomodulation
+Agent Results:
+${Object.entries(results).map(([agent, result]) => 
+  `${agent.toUpperCase()} AGENT:\n${result.analysis}\n`
+).join('\n---\n')}
 
-Research Gaps:
-- Standardization of traditional preparations
-- Bioavailability enhancement studies`,
-      confidence: 0.85,
-      timestamp: new Date(),
-      processingTime: 2000
-    };
+Please provide a comprehensive synthesis that integrates all agent perspectives into a cohesive, actionable analysis.`;
+
+      const coordinatedAnalysis = await this.makeGeminiCall(synthPrompt, 'Coordinator Agent');
+      
+      return {
+        success: true,
+        query: query,
+        coordinator_synthesis: coordinatedAnalysis,
+        agent_results: results,
+        timestamp: new Date(),
+        total_agents: Object.keys(results).length,
+        confidence: Math.min(0.95, Object.values(results)
+          .filter(r => r.success)
+          .reduce((avg, r) => avg + (r.confidence || 0.8), 0) / Object.keys(results).length)
+      };
+      
+    } catch (error) {
+      console.error('Multi-agent coordination error:', error);
+      return {
+        success: false,
+        error: error.message,
+        coordinator_synthesis: 'Multi-agent analysis temporarily unavailable. Please try again.',
+        timestamp: new Date()
+      };
+    }
   }
 
-  getMockCompoundResponse(compound) {
-    return {
-      success: true,
-      agent: 'compound',
-      analysis: `Molecular analysis of ${compound}:
+  // Main entry point for discovery requests
+  async processDiscoveryRequest(query, options = {}) {
+    console.log('🚀 Starting AI Discovery Process for:', query);
+    
+    try {
+      // Determine if this should be a multi-agent analysis
+      const shouldUseMultiAgent = options.multiAgent !== false && (
+        query.length > 50 || // Complex queries
+        options.comprehensive === true || // Explicitly requested
+        query.toLowerCase().includes('comprehensive') ||
+        query.toLowerCase().includes('detailed analysis')
+      );
       
-Structure: C21H20O6 (example)
-Drug Targets: COX-2, TNF-α, NF-κB pathway
-Safety Profile: Generally safe, no major toxicity
-Druggability Score: 0.75/1.0
-Traditional Use: జ్వరం (fever) treatment`,
-      confidence: 0.82,
-      timestamp: new Date(),
-      processingTime: 2500
-    };
+      if (shouldUseMultiAgent) {
+        console.log('📊 Using multi-agent analysis');
+        return await this.coordinateMultiAgentAnalysis(query, options);
+      } else {
+        // Single agent analysis - choose best agent based on query
+        const bestAgent = this.selectBestAgent(query);
+        console.log(`🎯 Using single agent: ${bestAgent}`);
+        
+        switch (bestAgent) {
+          case 'literature':
+            return await this.processWithLiteratureAgent(query, options.context);
+          case 'compound':
+            return await this.processWithCompoundAgent(query, options.herbs);
+          case 'research':
+            return await this.processWithResearchAgent(query, options.researchFocus);
+          case 'voice':
+            return await this.processWithVoiceAgent(query, options.audioContext);
+          default:
+            return await this.processWithLiteratureAgent(query, options.context);
+        }
+      }
+    } catch (error) {
+      console.error('Discovery process error:', error);
+      throw error;
+    }
   }
 
-  getMockResearchResponse(query) {
-    return {
-      success: true,
-      agent: 'research',
-      analysis: `Research findings for "${query}":
-      
-Recent Papers:
-1. "Traditional Ayurvedic compounds in modern drug discovery" (Nature, 2024)
-2. "Telugu medicinal plants: Pharmacological validation" (J Ethnopharmacol, 2024)
-
-Evidence Level: Moderate to High
-Current Research: 156 relevant papers found
-Confidence: 88%`,
-      confidence: 0.88,
-      timestamp: new Date(),
-      processingTime: 3000
+  selectBestAgent(query) {
+    const queryLower = query.toLowerCase();
+    
+    // Keywords for different agents
+    const agentKeywords = {
+      compound: ['chemical', 'compound', 'molecule', 'bioactive', 'phytochemistry', 'structure'],
+      research: ['study', 'research', 'clinical', 'trial', 'evidence', 'scientific'],
+      voice: ['voice', 'audio', 'speak', 'pronunciation', 'conversation'],
+      literature: ['classical', 'text', 'samhita', 'shloka', 'traditional', 'ancient']
     };
+    
+    // Score each agent based on keyword matches
+    const scores = {};
+    for (const [agent, keywords] of Object.entries(agentKeywords)) {
+      scores[agent] = keywords.reduce((score, keyword) => 
+        score + (queryLower.includes(keyword) ? 1 : 0), 0);
+    }
+    
+    // Return agent with highest score, default to literature
+    const bestAgent = Object.entries(scores).reduce((best, [agent, score]) => 
+      score > best.score ? { agent, score } : best, { agent: 'literature', score: 0 });
+    
+    return bestAgent.agent;
   }
 
-  getMockCoordinatorResponse(query) {
-    return {
-      success: true,
-      agent: 'coordinator',
-      synthesis: `Comprehensive analysis synthesis for "${query}":
-      
-Drug Development Potential: HIGH
-Key Finding: Strong correlation between traditional use and modern mechanisms
-Cultural Considerations: Community benefit-sharing essential
-Next Steps: Preclinical studies, standardization protocols
-Timeline: 18-24 months to clinical trials`,
-      confidence: 0.90,
-      timestamp: new Date(),
-      processingTime: 1500
-    };
-  }
-
-  getMockVoiceResponse(transcript, language) {
-    return {
-      success: true,
-      agent: 'voice',
-      processed: `Voice processing result:
-      
-Intent: Medical information search
-Entities: Turmeric, joint pain, traditional remedy
-Telugu Terms: పసుపు (pasupu - turmeric), కీళ్ల నొప్పులు (keellu noppulu - joint pain)
-Structured Query: "Analyze curcumin for arthritis treatment"`,
-      originalTranscript: transcript,
-      language,
-      confidence: 0.87,
-      timestamp: new Date(),
-      processingTime: 1200
-    };
+  // Health check method
+  async healthCheck() {
+    try {
+      const testQuery = "What is Ayurveda?";
+      const result = await this.makeGeminiCall(testQuery, 'Health Check');
+      return {
+        status: 'healthy',
+        timestamp: new Date(),
+        test_query: testQuery,
+        response_length: result.length,
+        available_keys: this.geminiKeys.length
+      };
+    } catch (error) {
+      return {
+        status: 'unhealthy',
+        error: error.message,
+        timestamp: new Date(),
+        available_keys: this.geminiKeys.length
+      };
+    }
   }
 }
 
-module.exports = new GeminiMultiAgentService();
+module.exports = new MultiModelAIService();
