@@ -15,6 +15,7 @@ const searchRoutes = require('./routes/search');
 const resultsRoutes = require('./routes/results');
 const discoveryRoutes = require('./routes/discovery');
 const speechRoutes = require('./routes/speechRoutes');
+const userRoutes = require('./routes/users');
 
 // Initialize Express app
 const app = express();
@@ -70,6 +71,7 @@ app.use('/api/agents', agentRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/results', resultsRoutes);
 app.use('/api/discovery', discoveryRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api', speechRoutes);
 
 // Health check endpoint
