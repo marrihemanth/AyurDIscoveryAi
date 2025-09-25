@@ -13,6 +13,7 @@ import { useAgents } from '../hooks/useAgents';
 import AgentStatus from './AgentStatus';
 import SearchInterface from './SearchInterface';
 import ResultsDisplay from './ResultsDisplay';
+import SpeechTest from './SpeechTest';
 import VoiceInput from './VoiceInput';
 import { discoveryAPI } from '../services/api';
 import type { DiscoveryResult } from '../types';
@@ -181,6 +182,12 @@ function Dashboard() {
     handleSearch(transcript, language);
   };
 
+  const handleTranscriptFinalized = (transcript: string) => {
+    // Handle the finalized transcript - could be used for additional processing
+    console.log('Voice transcript finalized:', transcript);
+    // The actual search is already handled by handleVoiceInput
+  };
+
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
       <Grid container spacing={3}>
@@ -208,7 +215,11 @@ function Dashboard() {
             <SearchInterface onSearch={handleSearch} isLoading={isAnalyzing} />
             
             <Box sx={{ mt: 2 }}>
-              <VoiceInput onVoiceInput={handleVoiceInput} />
+              <SpeechTest />
+              <VoiceInput 
+                onVoiceInput={handleVoiceInput} 
+                onTranscriptFinalized={handleTranscriptFinalized}
+              />
             </Box>
 
             {isAnalyzing && (

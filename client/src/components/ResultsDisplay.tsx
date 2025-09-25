@@ -31,6 +31,7 @@ import {
   PictureAsPdf,
 } from '@mui/icons-material';
 import { DiscoveryResult } from '../types';
+import TextToSpeechButton from './TextToSpeechButton';
 
 interface ResultsDisplayProps {
   results: DiscoveryResult[];
@@ -232,10 +233,11 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results }) => {
               >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
                   {getAgentIcon(result.agentId)}
-                  <Box sx={{ flexGrow: 1 }}>
+                  <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
                       {result.agentId}: {result.title}
                     </Typography>
+                    <TextToSpeechButton analysisResult={result.description} />
                   </Box>
                   <Chip
                     label={`${Math.round(result.confidence * 100)}% confidence`}

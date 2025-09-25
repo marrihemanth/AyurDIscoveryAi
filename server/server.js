@@ -11,6 +11,7 @@ const agentRoutes = require('./routes/agents');
 const searchRoutes = require('./routes/search');
 const resultsRoutes = require('./routes/results');
 const discoveryRoutes = require('./routes/discovery');
+const speechRoutes = require('./routes/speechRoutes');
 
 // Initialize Express app
 const app = express();
@@ -66,6 +67,7 @@ app.use('/api/agents', agentRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/results', resultsRoutes);
 app.use('/api/discovery', discoveryRoutes);
+app.use('/api', speechRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -86,7 +88,8 @@ app.get('/', (req, res) => {
       agents: '/api/agents',
       search: '/api/search',
       results: '/api/results',
-      discovery: '/api/discovery'
+      discovery: '/api/discovery',
+      speech: '/api/synthesize-speech'
     }
   });
 });

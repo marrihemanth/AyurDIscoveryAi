@@ -94,4 +94,50 @@ export const resultsAPI = {
   }
 };
 
+// Create a new async TypeScript function called "synthesizeSpeech".
+// It should take a "text" string as an argument.
+// This function should make a POST request to the "/api/synthesize-speech" endpoint
+// and return the audio response as a Blob.
+// Include robust error handling.
+export const synthesizeSpeech = async (text: string): Promise<Blob> => {
+  try {
+    if (!text || text.trim().length === 0) {
+      throw new Error('Text cannot be empty');
+    }
+
+    console.log('🔊 Synthesizing speech for text:', text.substring(0, 50) + '...');
+    
+    const response = await fetch(`${API_BASE_URL}/synthesize-speech`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ text: text.trim() }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(`TTS API error: ${response.status} - ${errorData.error || response.statusText}`);
+    }
+
+    const audioBlob = await response.blob();
+    
+    if (audioBlob.size === 0) {
+      throw new Error('Received empty audio response');
+    }
+
+    console.log('✅ Speech synthesis successful, audio size:', audioBlob.size, 'bytes');
+    return audioBlob;
+
+  } catch (error) {
+    console.error('❌ Speech synthesis failed:', error);
+    
+    if (error instanceof Error) {
+      throw error;
+    } else {
+      throw new Error('Unknown error occurred during speech synthesis');
+    }
+  }
+};
+
 export default api;
