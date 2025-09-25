@@ -51,6 +51,16 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results }) => {
     return 'error';
   };
 
+  // Group results by Traditional vs Modern categories
+  const traditionalResults = results.filter(result => 
+    result.agentId.toLowerCase().includes('literature')
+  );
+  
+  const modernResults = results.filter(result => 
+    result.agentId.toLowerCase().includes('compound') || 
+    result.agentId.toLowerCase().includes('research')
+  );
+
   const getAgentIcon = (agentType: string) => {
     switch (agentType?.toLowerCase()) {
       case 'literature':
@@ -87,6 +97,16 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results }) => {
 
   const filteredResults = results.filter(result => 
     filterAgent === 'all' || result.agentId.toLowerCase().includes(filterAgent.toLowerCase())
+  );
+
+  // Apply filter to both traditional and modern results
+  const filteredTraditionalResults = traditionalResults.filter(result => 
+    filterAgent === 'all' || filterAgent === 'literature' || result.agentId.toLowerCase().includes(filterAgent.toLowerCase())
+  );
+  
+  const filteredModernResults = modernResults.filter(result => 
+    filterAgent === 'all' || filterAgent === 'compound' || filterAgent === 'research' || 
+    result.agentId.toLowerCase().includes(filterAgent.toLowerCase())
   );
 
   const generatePDF = () => {
@@ -209,8 +229,8 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results }) => {
         </Grid>
       </Paper>
 
-      {/* Results */}
-      {filteredResults.length === 0 ? (
+      {/* Two-Column Results Layout */}
+      {results.length === 0 ? (
         <Paper 
           elevation={1} 
           sx={{ 
@@ -228,78 +248,156 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results }) => {
           </Typography>
         </Paper>
       ) : (
-        <Box>
-          {filteredResults.map((result, index) => (
-            <Accordion
-              key={result.id}
-              expanded={expanded === `panel${index}`}
-              onChange={handleAccordionChange(`panel${index}`)}
+        <Grid container spacing={3}>
+          {/* Left Column - Traditional Ayurvedic Perspective */}
+          <Grid item xs={12} md={6}>
+            <Card
               sx={{
-                mb: 2,
-                background: 'rgba(255, 255, 255, 0.1)',
-                backdropFilter: 'blur(10px)',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
-                '&:before': { display: 'none' },
-                borderRadius: '12px !important',
-                overflow: 'hidden'
+                background: 'rgba(46, 125, 50, 0.15)', // Green tint for traditional
+                backdropFilter: 'blur(15px)',
+                border: '1px solid rgba(46, 125, 50, 0.3)',
+                borderRadius: 3,
+                minHeight: '400px',
               }}
             >
-              <AccordionSummary
-                expandIcon={<ExpandMore />}
-                sx={{
-                  backgroundColor: getAgentColor(result.agentId),
-                  color: 'white',
-                  '& .MuiAccordionSummary-content': { alignItems: 'center' },
-                  minHeight: 64
-                }}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
-                  {getAgentIcon(result.agentId)}
-                  <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                      {result.agentId}: {result.title}
-                    </Typography>
-                    <TextToSpeechButton analysisResult={result.description} />
+              <CardContent sx={{ p: 3 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+                  <MenuBook sx={{ color: '#4CAF50', fontSize: 32 }} />
+                  <Typography variant="h5" sx={{ color: 'white', fontWeight: 'bold' }}>
+                    Traditional Ayurvedic Perspective
+                  </Typography>
+                </Box>
+                
+                {filteredTraditionalResults.length === 0 ? (
+                  <Typography variant="body1" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                    {traditionalResults.length === 0 
+                      ? "Traditional analysis results will appear here..." 
+                      : "No traditional results match the current filter."
+                    }
+                  </Typography>
+                ) : (
+                  <Box>
+                    {filteredTraditionalResults.map((result, index) => (
+                      <Box key={result.id} sx={{ mb: index < traditionalResults.length - 1 ? 3 : 0 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                          <Typography variant="h6" sx={{ color: '#4CAF50', fontWeight: 'bold' }}>
+                            {result.title}
+                          </Typography>
+                          <TextToSpeechButton analysisResult={result.description} />
+                          <Chip
+                            label={`${Math.round(result.confidence * 100)}% confidence`}
+                            size="small"
+                            sx={{
+                              backgroundColor: 'rgba(76, 175, 80, 0.2)',
+                              color: '#4CAF50',
+                              fontWeight: 'bold'
+                            }}
+                          />
+                        </Box>
+                        
+                        <Typography 
+                          variant="body1" 
+                          sx={{ 
+                            lineHeight: 1.8,
+                            fontSize: '1rem',
+                            whiteSpace: 'pre-wrap',
+                            fontFamily: 'Georgia, serif',
+                            color: 'rgba(255, 255, 255, 0.9)'
+                          }}
+                        >
+                          {result.description}
+                        </Typography>
+                        
+                        <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                          Generated at {result.timestamp.toLocaleString()}
+                        </Typography>
+                        
+                        {index < filteredTraditionalResults.length - 1 && (
+                          <Divider sx={{ my: 3, borderColor: 'rgba(76, 175, 80, 0.3)' }} />
+                        )}
+                      </Box>
+                    ))}
                   </Box>
-                  <Chip
-                    label={`${Math.round(result.confidence * 100)}% confidence`}
-                    size="small"
-                    sx={{
-                      backgroundColor: 'rgba(255,255,255,0.2)',
-                      color: 'white',
-                      fontWeight: 'bold'
-                    }}
-                  />
-                </Box>
-              </AccordionSummary>
-              <AccordionDetails sx={{ p: 3 }}>
-                <Typography 
-                  variant="body1" 
-                  sx={{ 
-                    lineHeight: 1.8,
-                    fontSize: '1.1rem',
-                    whiteSpace: 'pre-wrap',
-                    fontFamily: 'Georgia, serif'
-                  }}
-                >
-                  {result.description}
-                </Typography>
-                
-                <Divider sx={{ my: 2 }} />
-                
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Typography variant="caption" color="text.secondary">
-                    Generated at {result.timestamp.toLocaleString()}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    Source: AI Analysis with {Math.round(result.confidence * 100)}% confidence
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Right Column - Modern Scientific Analysis */}
+          <Grid item xs={12} md={6}>
+            <Card
+              sx={{
+                background: 'rgba(25, 118, 210, 0.15)', // Blue tint for modern
+                backdropFilter: 'blur(15px)',
+                border: '1px solid rgba(25, 118, 210, 0.3)',
+                borderRadius: 3,
+                minHeight: '400px',
+              }}
+            >
+              <CardContent sx={{ p: 3 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+                  <Science sx={{ color: '#2196F3', fontSize: 32 }} />
+                  <Typography variant="h5" sx={{ color: 'white', fontWeight: 'bold' }}>
+                    Modern Scientific Analysis
                   </Typography>
                 </Box>
-              </AccordionDetails>
-            </Accordion>
-          ))}
-        </Box>
+                
+                {filteredModernResults.length === 0 ? (
+                  <Typography variant="body1" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                    {modernResults.length === 0 
+                      ? "Scientific analysis results will appear here..." 
+                      : "No scientific results match the current filter."
+                    }
+                  </Typography>
+                ) : (
+                  <Box>
+                    {filteredModernResults.map((result, index) => (
+                      <Box key={result.id} sx={{ mb: index < modernResults.length - 1 ? 3 : 0 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                          {getAgentIcon(result.agentId)}
+                          <Typography variant="h6" sx={{ color: '#2196F3', fontWeight: 'bold' }}>
+                            {result.agentId}: {result.title}
+                          </Typography>
+                          <TextToSpeechButton analysisResult={result.description} />
+                          <Chip
+                            label={`${Math.round(result.confidence * 100)}% confidence`}
+                            size="small"
+                            sx={{
+                              backgroundColor: 'rgba(33, 150, 243, 0.2)',
+                              color: '#2196F3',
+                              fontWeight: 'bold'
+                            }}
+                          />
+                        </Box>
+                        
+                        <Typography 
+                          variant="body1" 
+                          sx={{ 
+                            lineHeight: 1.8,
+                            fontSize: '1rem',
+                            whiteSpace: 'pre-wrap',
+                            fontFamily: 'Georgia, serif',
+                            color: 'rgba(255, 255, 255, 0.9)'
+                          }}
+                        >
+                          {result.description}
+                        </Typography>
+                        
+                        <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                          Generated at {result.timestamp.toLocaleString()}
+                        </Typography>
+                        
+                        {index < filteredModernResults.length - 1 && (
+                          <Divider sx={{ my: 3, borderColor: 'rgba(33, 150, 243, 0.3)' }} />
+                        )}
+                      </Box>
+                    ))}
+                  </Box>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
       )}
     </Box>
   );

@@ -16,10 +16,11 @@ import { Search, Science, Psychology, Translate } from '@mui/icons-material';
 
 interface SearchInterfaceProps {
   onSearch: (query: string, type: string, language?: string) => void;
+  onTestSearch?: (query: string, type: string, language?: string) => void;
   isLoading?: boolean;
 }
 
-const SearchInterface: React.FC<SearchInterfaceProps> = ({ onSearch, isLoading = false }) => {
+const SearchInterface: React.FC<SearchInterfaceProps> = ({ onSearch, onTestSearch, isLoading = false }) => {
   const [query, setQuery] = useState('');
   const [searchType, setSearchType] = useState('comprehensive');
   const [language, setLanguage] = useState('en');
@@ -28,6 +29,13 @@ const SearchInterface: React.FC<SearchInterfaceProps> = ({ onSearch, isLoading =
     e.preventDefault();
     if (query.trim() && !isLoading) {
       onSearch(query.trim(), searchType, language);
+    }
+  };
+
+  const handleTestSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isLoading && onTestSearch) {
+      onTestSearch(query.trim() || 'turmeric for inflammation', searchType, language);
     }
   };
 
@@ -253,6 +261,48 @@ const SearchInterface: React.FC<SearchInterfaceProps> = ({ onSearch, isLoading =
             >
               {isLoading ? 'Analyzing...' : 'Analyze'}
             </Button>
+
+            {/* Test Button - Uses predefined data without API calls */}
+            {onTestSearch && (
+              <Button
+                variant="outlined"
+                size="large"
+                startIcon={<Science />}
+                onClick={handleTestSubmit}
+                disabled={isLoading}
+                sx={(theme) => ({ 
+                  minWidth: 140,
+                  height: 56,
+                  borderColor: theme.palette.mode === 'dark' 
+                    ? 'rgba(255, 193, 7, 0.8)' 
+                    : '#FF9800',
+                  color: theme.palette.mode === 'dark' 
+                    ? '#FFC107' 
+                    : '#FF9800',
+                  background: theme.palette.mode === 'dark'
+                    ? 'rgba(255, 193, 7, 0.1)'
+                    : 'rgba(255, 152, 0, 0.1)',
+                  transition: 'all 0.3s ease-in-out',
+                  fontSize: '1rem',
+                  fontWeight: 600,
+                  px: theme.spacing(3),
+                  '&:hover': { 
+                    borderColor: theme.palette.mode === 'dark' 
+                      ? '#FFC107' 
+                      : '#F57C00',
+                    background: theme.palette.mode === 'dark'
+                      ? 'rgba(255, 193, 7, 0.2)'
+                      : 'rgba(255, 152, 0, 0.2)',
+                    boxShadow: `0 4px 15px ${theme.palette.mode === 'dark' 
+                      ? 'rgba(255, 193, 7, 0.3)' 
+                      : 'rgba(255, 152, 0, 0.3)'}`,
+                    transform: 'translateY(-1px)'
+                  }
+                })}
+              >
+                Test Demo
+              </Button>
+            )}
           </Box>
 
           {/* Analysis Type Description */}

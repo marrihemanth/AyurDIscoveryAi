@@ -26,6 +26,123 @@ function Dashboard() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Predefined test data to avoid API consumption
+  const getTestResults = (query: string): DiscoveryResult[] => {
+    const timestamp = new Date();
+    return [
+      {
+        id: 'test-lit-1',
+        agentId: 'Literature Agent',
+        title: 'Traditional Ayurvedic Analysis',
+        description: `## Traditional Ayurvedic Analysis of "${query}"
+
+**Classical References:**
+According to Charaka Samhita, the herb mentioned has been extensively documented in classical Ayurvedic literature. The Sushruta Samhita (Sutra Sthana 38:28-30) describes its therapeutic properties.
+
+**Rasa (Taste):** Tikta, Katu (Bitter, Pungent)
+**Virya (Potency):** Ushna (Hot)
+**Prabhava (Special Effect):** Deepana, Pachana (Digestive, Carminative)
+
+**Traditional Properties:**
+- Enhances Agni (digestive fire)
+- Balances Kapha and Vata doshas
+- Traditional use in inflammatory conditions
+- Mentioned in Rasayana (rejuvenative) formulations
+
+**Sanskrit Shlokas:**
+"पित्तकफहरं तिक्तं कटु पाकरसं लघु।
+उष्णं दीपनमग्निवर्धकं रसायनम्॥"
+
+**Note:** This comprehensive analysis is based on classical Ayurvedic texts and traditional knowledge systems.`,
+        confidence: 0.92,
+        data: { type: 'literature', source: 'test' },
+        timestamp
+      },
+      {
+        id: 'test-comp-1',
+        agentId: 'Compound Agent',
+        title: 'Molecular Compound Analysis',
+        description: `## Phytochemical Analysis of "${query}"
+
+**Primary Bioactive Compounds:**
+1. **Curcumin (Principal Active)** - C21H20O6
+   - Molecular Weight: 368.38 g/mol
+   - Polyphenolic compound with anti-inflammatory properties
+   - Bioavailability: Enhanced with piperine co-administration
+
+2. **Demethoxycurcumin** - C20H18O5
+   - Secondary curcuminoid with antioxidant activity
+   - Synergistic effects with primary curcumin
+
+3. **Bisdemethoxycurcumin** - C19H16O4
+   - Tertiary curcuminoid with neuroprotective properties
+
+**Mechanism of Action:**
+- Inhibits NF-κB pathway (primary anti-inflammatory mechanism)
+- Modulates COX-2 and LOX enzyme activity
+- Enhances antioxidant enzyme systems (SOD, CAT, GPx)
+- Crosses blood-brain barrier (limited but significant)
+
+**Drug-likeness Score:** 0.82/1.0
+**Safety Profile:** GRAS status, well-tolerated up to 8g/day
+**Bioavailability:** Low (enhanced with adjuvants)
+
+**Modern Applications:**
+- Anti-inflammatory therapeutics
+- Neuroprotective formulations
+- Hepatoprotective compounds
+- Antioxidant supplements`,
+        confidence: 0.89,
+        data: { type: 'compound', source: 'test' },
+        timestamp
+      },
+      {
+        id: 'test-res-1',
+        agentId: 'Research Agent',
+        title: 'Evidence-Based Scientific Review',
+        description: `## Clinical Research Summary for "${query}"
+
+**Meta-Analysis Overview:**
+Based on 127 peer-reviewed studies and 23 systematic reviews (2018-2024).
+
+**Clinical Efficacy:**
+- **Anti-inflammatory:** 76% of RCTs show significant reduction in inflammatory markers
+- **Pain Management:** Moderate evidence (Effect size: 0.54, 95% CI: 0.31-0.77)
+- **Antioxidant Activity:** Strong evidence from in-vitro and in-vivo studies
+
+**Recent Clinical Trials:**
+1. **Randomized Controlled Trial (2023)** - n=245
+   - Primary endpoint: CRP reduction by 32% (p<0.001)
+   - Secondary: IL-6 levels decreased by 28%
+
+2. **Systematic Review (2024)** - 15 studies, n=1,456
+   - Pooled analysis shows consistent anti-inflammatory effects
+   - Heterogeneity: I² = 34% (acceptable)
+
+**Safety Profile:**
+- Adverse events: <5% (mostly GI-related)
+- Drug interactions: Minimal (monitor anticoagulants)
+- Pregnancy category: Generally recognized as safe in food amounts
+
+**Research Gaps:**
+- Long-term safety studies (>2 years)
+- Optimal dosing protocols
+- Bioavailability enhancement strategies
+- Personalized medicine approaches
+
+**Clinical Recommendations:**
+- Effective as adjunct therapy in inflammatory conditions
+- Standardized extracts preferred over crude preparations
+- Consider individual variation in metabolism
+
+**Evidence Level:** Grade A (Strong evidence from multiple RCTs)`,
+        confidence: 0.87,
+        data: { type: 'research', source: 'test' },
+        timestamp
+      }
+    ];
+  };
+
   const handleSearch = async (query: string, searchType: string = 'comprehensive', language: string = 'en') => {
     try {
       setError(null);
@@ -174,6 +291,55 @@ function Dashboard() {
       setIsAnalyzing(false);
       
       const agentTypes = ['literature', 'compound', 'crossreference', 'voice', 'coordinator'];
+      agentTypes.forEach(type => {
+        updateAgent(type, { status: 'idle', progress: 0 });
+      });
+    }
+  };
+
+  const handleTestSearch = async (query: string, searchType: string = 'comprehensive', language: string = 'en') => {
+    try {
+      setError(null);
+      setIsAnalyzing(true);
+      setResults([]);
+
+      // Simulate agent processing with test data
+      const agentTypes = ['literature', 'compound', 'research'];
+      
+      // Update agents to processing state
+      agentTypes.forEach(type => {
+        updateAgent(type, { status: 'processing', progress: 30 });
+      });
+
+      // Simulate processing delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      // Update agents to 50% progress
+      agentTypes.forEach(type => {
+        updateAgent(type, { status: 'processing', progress: 70 });
+      });
+
+      // Another delay to simulate processing
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Complete agents and set test results
+      agentTypes.forEach(type => {
+        updateAgent(type, { status: 'completed', progress: 100 });
+      });
+
+      // Set predefined test results
+      const testResults = getTestResults(query);
+      setResults(testResults);
+      setIsAnalyzing(false);
+
+      console.log('✅ Test search completed with predefined results');
+
+    } catch (err) {
+      console.error('Test search error:', err);
+      setError('Test analysis failed. Please try again.');
+      setIsAnalyzing(false);
+      
+      const agentTypes = ['literature', 'compound', 'research'];
       agentTypes.forEach(type => {
         updateAgent(type, { status: 'idle', progress: 0 });
       });
@@ -329,7 +495,11 @@ function Dashboard() {
                   🔍 Discovery Interface
                 </Typography>
                 
-                <SearchInterface onSearch={handleSearch} isLoading={isAnalyzing} />
+                <SearchInterface 
+                  onSearch={handleSearch} 
+                  onTestSearch={handleTestSearch}
+                  isLoading={isAnalyzing} 
+                />
                 
                 <Box sx={{ mt: 3 }}>
                   <SpeechTest />

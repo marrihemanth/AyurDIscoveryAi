@@ -34,12 +34,18 @@ class BedrockAIService {
     console.log('🚀 Bedrock AI Service Initialized');
     console.log(`🔑 Model: ${this.modelId}`);
     console.log(`🌐 Region: ${process.env.AWS_REGION || 'us-east-1'}`);
+    
+    // Initialize agents
+    this.initializeAgents();
   }
 
   initializeDemoMode() {
     console.log('🎭 Initializing Demo Mode (Bedrock API not available)');
     this.client = null;
     this.modelId = 'demo-mode';
+    
+    // Initialize agents for demo mode too
+    this.initializeAgents();
   }
 
   initializeAgents() {
@@ -89,9 +95,6 @@ Your role is to:
 Focus on peer-reviewed research, meta-analyses, and systematic reviews. Always distinguish between traditional claims and scientifically validated effects.`
       }
     };
-    
-    // Initialize agents for both demo and live modes
-    this.initializeAgents();
   }
 
   async generateContent(prompt, agentType = 'research') {
