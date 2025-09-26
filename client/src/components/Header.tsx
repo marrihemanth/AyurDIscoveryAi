@@ -12,14 +12,17 @@ import {
   MenuItem,
 } from '@mui/material';
 import { Science, Mic, LightMode, DarkMode, AutoAwesome, AccountCircle } from '@mui/icons-material';
-import { useAuth0 } from '@auth0/auth0-react';
 import { useTheme } from '../theme/ThemeContext';
-import LoginButton from './LoginButton';
-import LogoutButton from './LogoutButton';
+import { useState, useEffect } from 'react';
+import { User, onAuthStateChanged, signOut } from 'firebase/auth';
+import { auth } from '../firebase';
+import { Button } from '@mui/material';
+import { ensureUserDocument } from '../utils/userUtils';
 
 const Header: React.FC = () => {
   const { isDarkMode, toggleTheme } = useTheme();
-  const { user, isAuthenticated, isLoading } = useAuth0();
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
 
   const handleProfileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -29,6 +32,28 @@ const Header: React.FC = () => {
   const handleProfileMenuClose = () => {
     setAnchorEl(null);
   };
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      handleProfileMenuClose();
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        // Ensure user document exists in Firestore
+        await ensureUserDocument(currentUser);
+      }
+      setUser(currentUser);
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   return (
     <AppBar 
@@ -161,8 +186,44 @@ const Header: React.FC = () => {
           {/* Authentication Section */}
           {!isLoading && (
             <>
-              {!isAuthenticated ? (
-                <LoginButton />
+              {!user ? (
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Button 
+                    variant="outlined" 
+                    href="/login"
+                    sx={{ 
+                      textTransform: 'none',
+                      borderRadius: 2,
+                      bgcolor: (theme) => theme.palette.mode === 'dark'
+                        ? 'rgba(71, 85, 105, 0.3)'
+                        : 'rgba(248, 250, 252, 0.8)',
+                      border: (theme) => theme.palette.mode === 'dark'
+                        ? '1px solid rgba(71, 85, 105, 0.5)'
+                        : '1px solid rgba(226, 232, 240, 0.8)',
+                      '&:hover': {
+                        bgcolor: (theme) => theme.palette.mode === 'dark'
+                          ? 'rgba(99, 102, 241, 0.2)'
+                          : 'rgba(99, 102, 241, 0.1)',
+                      }
+                    }}
+                  >
+                    Login
+                  </Button>
+                  <Button 
+                    variant="contained" 
+                    href="/signup"
+                    sx={{ 
+                      textTransform: 'none',
+                      borderRadius: 2,
+                      bgcolor: (theme) => theme.palette.mode === 'dark' ? '#8b7cf6' : '#6366f1',
+                      '&:hover': {
+                        bgcolor: (theme) => theme.palette.mode === 'dark' ? '#7c3aed' : '#4f46e5',
+                      }
+                    }}
+                  >
+                    Sign Up
+                  </Button>
+                </Box>
               ) : (
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Tooltip title="User Profile" arrow>
@@ -184,10 +245,10 @@ const Header: React.FC = () => {
                         transition: 'all 0.2s ease-in-out',
                       }}
                     >
-                      {user?.picture ? (
+                      {user?.photoURL ? (
                         <Avatar
-                          src={user.picture}
-                          alt={user.name}
+                          src={user.photoURL}
+                          alt={user.displayName || user.email || 'User'}
                           sx={{ width: 24, height: 24 }}
                         />
                       ) : (
@@ -215,8 +276,8 @@ const Header: React.FC = () => {
                     <MenuItem onClick={() => { handleProfileMenuClose(); window.location.href = '/complete-profile'; }}>
                       Settings
                     </MenuItem>
-                    <MenuItem onClick={handleProfileMenuClose}>
-                      <LogoutButton />
+                    <MenuItem onClick={handleLogout}>
+                      Logout
                     </MenuItem>
                   </Menu>
                 </Box>

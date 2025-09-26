@@ -32,6 +32,25 @@ import {
 } from '@mui/icons-material';
 import { DiscoveryResult } from '../types';
 import TextToSpeechButton from './TextToSpeechButton';
+import MarkdownRenderer from './MarkdownRenderer';
+
+// Helper function to process response text and convert escaped characters
+const processResponseText = (text: string): string => {
+  if (!text) return '';
+  
+  return text
+    // Convert escaped newlines to actual newlines
+    .replace(/\\n/g, '\n')
+    // Convert escaped hashtags to actual hashtags for headers
+    .replace(/\\#/g, '#')
+    // Convert escaped asterisks to actual asterisks for emphasis
+    .replace(/\\\*/g, '*')
+    // Remove extra backslashes
+    .replace(/\\\\/g, '\\')
+    // Clean up any double newlines to single
+    .replace(/\n\n+/g, '\n\n')
+    .trim();
+};
 
 interface ResultsDisplayProps {
   results: DiscoveryResult[];
@@ -295,18 +314,20 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results }) => {
                           />
                         </Box>
                         
-                        <Typography 
-                          variant="body1" 
+                        <MarkdownRenderer 
+                          content={processResponseText(result.description)}
                           sx={{ 
                             lineHeight: 1.8,
                             fontSize: '1rem',
-                            whiteSpace: 'pre-wrap',
                             fontFamily: 'Georgia, serif',
-                            color: 'rgba(255, 255, 255, 0.9)'
+                            color: 'rgba(255, 255, 255, 0.9)',
+                            '& p': { color: 'rgba(255, 255, 255, 0.9)' },
+                            '& h1, & h2, & h3, & h4, & h5, & h6': { 
+                              color: '#4CAF50'
+                            },
+                            '& li': { color: 'rgba(255, 255, 255, 0.9)' }
                           }}
-                        >
-                          {result.description}
-                        </Typography>
+                        />
                         
                         <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
                           Generated at {result.timestamp.toLocaleString()}
@@ -370,18 +391,20 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results }) => {
                           />
                         </Box>
                         
-                        <Typography 
-                          variant="body1" 
+                        <MarkdownRenderer 
+                          content={processResponseText(result.description)}
                           sx={{ 
                             lineHeight: 1.8,
                             fontSize: '1rem',
-                            whiteSpace: 'pre-wrap',
                             fontFamily: 'Georgia, serif',
-                            color: 'rgba(255, 255, 255, 0.9)'
+                            color: 'rgba(255, 255, 255, 0.9)',
+                            '& p': { color: 'rgba(255, 255, 255, 0.9)' },
+                            '& h1, & h2, & h3, & h4, & h5, & h6': { 
+                              color: '#2196F3'
+                            },
+                            '& li': { color: 'rgba(255, 255, 255, 0.9)' }
                           }}
-                        >
-                          {result.description}
-                        </Typography>
+                        />
                         
                         <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
                           Generated at {result.timestamp.toLocaleString()}

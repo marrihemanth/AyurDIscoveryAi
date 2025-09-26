@@ -1,6 +1,7 @@
-// Create a 'Profile.tsx' component. Use the 'useAuth0' hook to get the 'user' and 'isAuthenticated' objects. If the user is authenticated, display their name and email.
-import React from 'react';
-import { useAuth0 } from '@auth0/auth0-react';
+import React, { useState, useEffect } from 'react';
+import { User, onAuthStateChanged } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '../firebase';
 import {
   Card,
   CardContent,
@@ -17,8 +18,56 @@ import {
   Badge as BadgeIcon
 } from '@mui/icons-material';
 
+interface UserProfile {
+  uid: string;
+  email: string;
+  displayName?: string;
+  photoURL?: string;
+  role?: string;
+  profileComplete?: boolean;
+  createdAt?: any;
+  updatedAt?: any;
+}
+
 const Profile: React.FC = () => {
-  const { user, isAuthenticated, isLoading, error } = useAuth0();
+  const [user, setUser] = useState<User | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+        try {
+          // Get additional user data from Firestore
+          const userDocRef = doc(db, 'users', currentUser.uid);
+          const userDoc = await getDoc(userDocRef);
+          
+          if (userDoc.exists()) {
+            setUserProfile(userDoc.data() as UserProfile);
+          } else {
+            // If no Firestore document exists, create basic profile from Firebase Auth
+            setUserProfile({
+              uid: currentUser.uid,
+              email: currentUser.email || '',
+              displayName: currentUser.displayName || undefined,
+              photoURL: currentUser.photoURL || undefined,
+            });
+          }
+        } catch (err) {
+          setError('Failed to load user profile');
+          console.error('Profile loading error:', err);
+        }
+      } else {
+        setUser(null);
+        setUserProfile(null);
+      }
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   if (isLoading) {
     return (
@@ -31,12 +80,12 @@ const Profile: React.FC = () => {
   if (error) {
     return (
       <Alert severity="error">
-        Authentication error: {error.message}
+        Authentication error: {error}
       </Alert>
     );
   }
 
-  if (!isAuthenticated || !user) {
+  if (!user) {
     return (
       <Alert severity="info">
         Please log in to view your profile.
@@ -57,8 +106,8 @@ const Profile: React.FC = () => {
       <CardContent>
         <Box display="flex" flexDirection="column" alignItems="center" gap={2}>
           <Avatar
-            src={user.picture}
-            alt={user.name}
+            src={user.photoURL || userProfile?.photoURL}
+            alt={user.displayName || userProfile?.displayName || user.email || 'User'}
             sx={{ 
               width: 80, 
               height: 80,
@@ -69,7 +118,7 @@ const Profile: React.FC = () => {
           </Avatar>
           
           <Typography variant="h5" component="h2" textAlign="center">
-            {user.name}
+            {user.displayName || userProfile?.displayName || 'Anonymous User'}
           </Typography>
           
           <Box display="flex" alignItems="center" gap={1}>
@@ -79,7 +128,7 @@ const Profile: React.FC = () => {
             </Typography>
           </Box>
           
-          {user.email_verified && (
+          {user.emailVerified && (
             <Chip 
               label="Email Verified" 
               color="success" 
@@ -89,16 +138,16 @@ const Profile: React.FC = () => {
           )}
           
           {/* Display user role if available */}
-          {user['app_metadata']?.role && (
+          {userProfile?.role && (
             <Chip 
-              label={`Role: ${user['app_metadata'].role}`} 
+              label={`Role: ${userProfile.role}`} 
               color="primary" 
               size="small"
             />
           )}
           
           <Typography variant="caption" color="text.secondary" textAlign="center">
-            Last updated: {user.updated_at ? new Date(user.updated_at).toLocaleDateString() : 'N/A'}
+            Member since: {userProfile?.createdAt ? new Date(userProfile.createdAt.toDate()).toLocaleDateString() : 'N/A'}
           </Typography>
         </Box>
       </CardContent>

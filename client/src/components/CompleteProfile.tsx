@@ -1,8 +1,10 @@
-// Create a new page component at '/complete-profile'.
-// This page should have a form with a dropdown menu asking the user to select their role: "Researcher", "Practitioner", or "Student".
-// When they submit the form, save this role to their user profile.
-import React, { useState } from 'react';
-import { useAuth0 } from '@auth0/auth0-react';
+// After a user successfully signs up for the first time, redirect them to a '/complete-profile' page.
+// On this page, create a form with a dropdown for the user to select their role: "Researcher", "Practitioner", or "Student".
+// When they submit, use the Firestore database to create a new document in a 'users' collection, and save their role there.
+import React, { useState, useEffect } from 'react';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { doc, updateDoc, getDoc } from 'firebase/firestore';
+import { auth, db } from '../firebase';
 import {
   Container,
   Paper,
@@ -53,11 +55,36 @@ const roleOptions: RoleOption[] = [
 ];
 
 const CompleteProfile: React.FC = () => {
-  const { user, getAccessTokenSilently, isAuthenticated, isLoading } = useAuth0();
+  const [user, setUser] = useState<User | null>(null);
   const [selectedRole, setSelectedRole] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+        
+        // Check if profile is already complete
+        const userDocRef = doc(db, 'users', currentUser.uid);
+        const userDoc = await getDoc(userDocRef);
+        
+        if (userDoc.exists() && userDoc.data().profileComplete) {
+          // Profile already complete, redirect to dashboard
+          window.location.href = '/';
+          return;
+        }
+      } else {
+        // No user logged in, redirect to login
+        window.location.href = '/auth';
+      }
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const handleRoleChange = (event: SelectChangeEvent) => {
     setSelectedRole(event.target.value);
@@ -76,27 +103,17 @@ const CompleteProfile: React.FC = () => {
     setSubmitError(null);
 
     try {
-      // Get access token to authenticate with your backend
-      const token = await getAccessTokenSilently();
-      
-      // Call your backend API to save the user role
-      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/users/profile`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          userId: user?.sub,
-          role: selectedRole,
-          email: user?.email,
-          name: user?.name
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to save profile');
+      if (!user) {
+        throw new Error('No user logged in');
       }
+
+      // Update user document in Firestore
+      const userDocRef = doc(db, 'users', user.uid);
+      await updateDoc(userDocRef, {
+        role: selectedRole,
+        profileComplete: true,
+        updatedAt: new Date()
+      });
 
       setSubmitSuccess(true);
       
@@ -123,7 +140,7 @@ const CompleteProfile: React.FC = () => {
     );
   }
 
-  if (!isAuthenticated) {
+  if (!user) {
     return (
       <Container maxWidth="sm">
         <Alert severity="warning">
@@ -150,23 +167,37 @@ const CompleteProfile: React.FC = () => {
   }
 
   return (
-    <Container maxWidth="sm">
-      <Paper 
-        elevation={3} 
-        sx={{ 
-          p: 4, 
-          mt: 4,
-          background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
-          backdropFilter: 'blur(10px)',
-          border: '1px solid rgba(255,255,255,0.2)',
-        }}
-      >
+    <Box
+      sx={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: (theme) => theme.palette.mode === 'dark'
+          ? `linear-gradient(135deg, #0F0F23 0%, #1A1B3A 50%, #2D2E5F 100%)`
+          : `linear-gradient(135deg, ${theme.palette.background.default} 0%, #f1f5f9 100%)`,
+        px: 2
+      }}
+    >
+      <Container maxWidth="sm">
+        <Paper 
+          elevation={3} 
+          sx={{ 
+            p: 4,
+            background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(255,255,255,0.2)',
+            boxShadow: (theme) => theme.palette.mode === 'dark'
+              ? '0 8px 32px 0 rgba(31, 38, 135, 0.37)'
+              : '0 8px 32px 0 rgba(31, 38, 135, 0.2)',
+          }}
+        >
         <Typography variant="h4" component="h1" gutterBottom textAlign="center">
           Complete Your Profile
         </Typography>
         
         <Typography variant="body1" color="text.secondary" textAlign="center" sx={{ mb: 3 }}>
-          Welcome, {user?.name}! Please select your role to personalize your AyurDiscovery AI experience.
+          Welcome, {user?.displayName || user?.email}! Please select your role to personalize your AyurDiscovery AI experience.
         </Typography>
 
         <form onSubmit={handleSubmit}>
@@ -219,6 +250,7 @@ const CompleteProfile: React.FC = () => {
         </form>
       </Paper>
     </Container>
+    </Box>
   );
 };
 

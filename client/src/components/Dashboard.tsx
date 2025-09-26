@@ -18,6 +18,7 @@ import ResultsDisplay from './ResultsDisplay';
 import SpeechTest from './SpeechTest';
 import VoiceInput from './VoiceInput';
 import { discoveryAPI } from '../services/api';
+import AuthDebug from './AuthDebug';
 import type { DiscoveryResult } from '../types';
 
 function Dashboard() {
@@ -366,6 +367,9 @@ Based on 127 peer-reviewed studies and 23 systematic reviews (2018-2024).
       }}
     >
       <Container maxWidth="xl" sx={{ py: 6 }}>
+        {/* Temporary debug component */}
+        <AuthDebug />
+        
         <Grid container spacing={4}>
           {/* Hero Header */}
           <Grid item xs={12}>
