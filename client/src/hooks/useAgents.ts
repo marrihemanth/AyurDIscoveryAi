@@ -35,14 +35,6 @@ const initialAgents: Agent[] = [
     progress: 0,
     lastUpdate: new Date(),
   },
-  {
-    id: 'coordinator',
-    name: 'Coordinator Agent',
-    type: 'coordinator',
-    status: 'idle',
-    progress: 0,
-    lastUpdate: new Date(),
-  },
 ];
 
 export const useAgents = () => {

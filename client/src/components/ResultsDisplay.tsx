@@ -77,8 +77,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results }) => {
   
   const modernResults = results.filter(result => 
     result.agentId.toLowerCase().includes('compound') || 
-    result.agentId.toLowerCase().includes('research') ||
-    result.agentId.toLowerCase().includes('coordinator')
+    result.agentId.toLowerCase().includes('research')
   );
 
   const getAgentIcon = (agentType: string) => {
@@ -127,8 +126,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results }) => {
   const filteredModernResults = modernResults.filter(result => 
     filterAgent === 'all' || 
     (filterAgent === 'compound' && result.agentId.toLowerCase().includes('compound')) ||
-    (filterAgent === 'research' && result.agentId.toLowerCase().includes('research')) ||
-    (filterAgent === 'coordinator' && result.agentId.toLowerCase().includes('coordinator'))
+    (filterAgent === 'research' && result.agentId.toLowerCase().includes('research'))
   );
 
   const generatePDF = () => {
@@ -281,7 +279,6 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results }) => {
                 <MenuItem value="literature">📚 Literature Agent</MenuItem>
                 <MenuItem value="compound">🧪 Compound Agent</MenuItem>
                 <MenuItem value="research">🔬 Research Agent</MenuItem>
-                <MenuItem value="coordinator">🎯 Coordinator Agent</MenuItem>
               </Select>
             </FormControl>
           </Grid>

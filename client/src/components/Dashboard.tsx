@@ -142,14 +142,14 @@ Based on 127 peer-reviewed studies and 23 systematic reviews (2018-2024).
     ];
   };
 
-  const handleSearch = async (query: string, searchType: string = 'comprehensive', language: string = 'en') => {
+  const handleSearch = async (query: string, searchType: string = 'comprehensive', language: string = 'mixed') => {
     try {
       setError(null);
       setIsAnalyzing(true);
       setResults([]);
 
-      // Update all agents to processing state
-      const agentTypes = ['literature', 'compound', 'research', 'voice', 'coordinator'];
+      // Update all agents to processing state (coordinator runs behind the scenes)
+      const agentTypes = ['literature', 'compound', 'research', 'voice'];
       agentTypes.forEach(type => {
         updateAgent(type, { status: 'processing', progress: 10 });
       });
@@ -237,6 +237,12 @@ Based on 127 peer-reviewed studies and 23 systematic reviews (2018-2024).
         finalSessionData.agents.forEach((agent: any) => {
           console.log(`📋 Processing agent ${agent.type}:`, agent);
           
+          // Skip coordinator agent from displaying results (it works behind the scenes)
+          if (agent.type === 'coordinator') {
+            console.log('🔄 Coordinator agent results excluded from display (runs behind the scenes)');
+            return;
+          }
+          
           // Check for completed agents with results (including those with errors but still providing data)
           if (agent.status === 'completed' && agent.results) {
             const resultData = agent.results || {};
@@ -315,7 +321,7 @@ Based on 127 peer-reviewed studies and 23 systematic reviews (2018-2024).
       setError('Analysis failed. Please try again.');
       setIsAnalyzing(false);
       
-      const agentTypes = ['literature', 'compound', 'research', 'voice', 'coordinator'];
+      const agentTypes = ['literature', 'compound', 'research', 'voice'];
       agentTypes.forEach(type => {
         updateAgent(type, { status: 'idle', progress: 0 });
       });

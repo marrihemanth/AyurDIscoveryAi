@@ -21,8 +21,8 @@ const SearchInterface: React.FC<SearchInterfaceProps> = ({ onSearch, isLoading =
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (query.trim() && !isLoading) {
-      // Always use comprehensive analysis, auto-detect language
-      onSearch(query.trim(), 'comprehensive', 'auto');
+      // Always use comprehensive analysis, mixed language support
+      onSearch(query.trim(), 'comprehensive', 'mixed');
     }
   };
 
@@ -155,7 +155,7 @@ const SearchInterface: React.FC<SearchInterfaceProps> = ({ onSearch, isLoading =
               textAlign: 'center'
             })}
           >
-            🤖 AI automatically detects language and selects optimal analysis approach
+            🤖 AI supports mixed language input and selects optimal analysis approach
           </Typography>
 
           {/* Example Queries */}
