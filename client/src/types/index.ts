@@ -1,7 +1,7 @@
 export interface Agent {
   id: string;
   name: string;
-  type: 'literature' | 'compound' | 'crossreference' | 'voice' | 'coordinator';
+  type: 'literature' | 'compound' | 'research' | 'voice' | 'coordinator';
   status: 'idle' | 'processing' | 'completed' | 'error';
   progress: number;
   lastUpdate: Date;

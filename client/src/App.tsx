@@ -3,6 +3,8 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { CssBaseline } from '@mui/material';
 import { CustomThemeProvider, useTheme } from './theme/ThemeContext';
+import { AuthProvider } from './hooks/useAuth';
+import ErrorBoundary from './components/ErrorBoundary';
 import Dashboard from './components/Dashboard';
 import Header from './components/Header';
 import Profile from './components/Profile';
@@ -39,9 +41,13 @@ const AppContent: React.FC = () => {
 
 function App() {
   return (
-    <CustomThemeProvider>
-      <AppContent />
-    </CustomThemeProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <CustomThemeProvider>
+          <AppContent />
+        </CustomThemeProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 

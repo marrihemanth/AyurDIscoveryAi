@@ -20,9 +20,9 @@ const mockAgents = [
     lastUpdate: new Date(),
   },
   {
-    id: 'crossreference',
-    name: 'Cross Reference Agent',
-    type: 'crossreference',
+    id: 'research',
+    name: 'Research Agent',
+    type: 'research',
     status: 'idle',
     progress: 0,
     lastUpdate: new Date(),

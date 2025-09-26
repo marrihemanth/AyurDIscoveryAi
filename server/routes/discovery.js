@@ -24,8 +24,8 @@ const validateDiscoveryQuery = [
   
   body('language')
     .optional()
-    .isIn(['en', 'te'])
-    .withMessage('Language must be either en (English) or te (Telugu)'),
+    .isIn(['en', 'te', 'mixed'])
+    .withMessage('Language must be en (English), te (Telugu), or mixed'),
   
   body('voiceInput')
     .optional()
@@ -49,11 +49,12 @@ router.post('/analyze', validateDiscoveryQuery, async (req, res) => {
     const { query, language = 'en', voiceInput = false } = req.body;
     
     // Additional security check: Reject queries that contain only special characters
-    const cleanQuery = query.replace(/[^\w\s]/gi, '').trim();
+    // Support Unicode characters including Telugu, Sanskrit, etc.
+    const cleanQuery = query.replace(/[^\p{L}\p{N}\s]/gu, '').trim();
     if (cleanQuery.length < 2) {
       return res.status(400).json({
         success: false,
-        message: 'Query must contain at least 2 alphanumeric characters'
+        message: 'Query must contain at least 2 characters from any language'
       });
     }
     const sessionId = uuidv4();

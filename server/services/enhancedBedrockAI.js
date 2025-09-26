@@ -6,6 +6,7 @@ const {
   BedrockAgentRuntimeClient, 
   RetrieveAndGenerateCommand 
 } = require('@aws-sdk/client-bedrock-agent-runtime');
+const ConfidenceCalculator = require('../utils/confidenceCalculator');
 
 class EnhancedBedrockAIService {
   constructor() {
@@ -45,6 +46,10 @@ class EnhancedBedrockAIService {
     }
     
     this.initializeAgents();
+    
+    // Initialize advanced confidence calculator
+    this.confidenceCalculator = new ConfidenceCalculator();
+    console.log('🎯 Advanced Confidence Calculator initialized');
   }
 
   initializeAwsClients() {
@@ -309,10 +314,19 @@ Present coordinated analysis with:
     }
 
     try {
-      console.log('🧪 Invoking Compound Agent with Nova Premier...');
+      const language = context.language || 'en';
+      console.log(`🧪 Invoking Compound Agent with Nova Premier (Language: ${language})...`);
       console.log('🔑 Using AWS Access Key authentication');
       
-      const prompt = `${this.agents.compound.prompt}\n\nUser Query: ${query}\n\nPlease provide detailed compound analysis.`;
+      // Add language-specific instructions
+      let languageInstruction = '';
+      if (language === 'te') {
+        languageInstruction = '\n\nతెలుగులో సమాధానం ఇవ్వండి. సంస్కృత పదాలను తెలుగు అక్షరాలలో వ్రాయండి మరియు వాటి అర్థాన్ని వివరించండి. ఆయుర్వేద సిద్ధాంతాలను తెలుగులో స్పష్టంగా వివరించండి.';
+      } else if (language === 'mixed') {
+        languageInstruction = '\n\nProvide response in both English and Telugu. Include Sanskrit terms with Telugu pronunciation and meanings.';
+      }
+      
+      const prompt = `${this.agents.compound.prompt}${languageInstruction}\n\nUser Query: ${query}\n\nPlease provide detailed compound analysis.`;
       
       // AWS Nova Premier specific request format
       const requestBody = {
@@ -495,6 +509,62 @@ Further investigation recommended in areas with lower confidence scores.
       : 0;
   }
 
+  calculateAdvancedOverallConfidence(responses, crossValidationScore) {
+    const validResponses = Object.values(responses).filter(r => r !== null && r.confidence !== undefined);
+    
+    if (validResponses.length === 0) return 0;
+    
+    // Weight different agent types based on their importance
+    const agentWeights = {
+      literature: 0.2,   // Traditional knowledge foundation
+      compound: 0.3,     // Core scientific analysis  
+      research: 0.25,    // Evidence validation
+      coordinator: 0.25  // Synthesis and integration
+    };
+    
+    let weightedSum = 0;
+    let totalWeight = 0;
+    
+    Object.entries(responses).forEach(([agentType, response]) => {
+      if (response && response.confidence !== undefined) {
+        const weight = agentWeights[agentType] || 0.2;
+        weightedSum += response.confidence * weight;
+        totalWeight += weight;
+      }
+    });
+    
+    const baseConfidence = totalWeight > 0 ? weightedSum / totalWeight : 0;
+    
+    // Apply cross-validation bonus
+    const crossValidationBonus = crossValidationScore * 0.1;
+    
+    // Apply consensus penalty/bonus
+    const confidenceVariance = this.calculateConfidenceVariance(validResponses);
+    const consensusBonus = confidenceVariance < 0.1 ? 0.05 : -0.02;
+    
+    const finalConfidence = Math.max(0.1, Math.min(0.98, 
+      baseConfidence + crossValidationBonus + consensusBonus
+    ));
+    
+    console.log(`🎯 Advanced Confidence Calculation:
+      Base: ${(baseConfidence * 100).toFixed(1)}%
+      Cross-validation: +${(crossValidationBonus * 100).toFixed(1)}%  
+      Consensus: ${consensusBonus > 0 ? '+' : ''}${(consensusBonus * 100).toFixed(1)}%
+      Final: ${(finalConfidence * 100).toFixed(1)}%`);
+    
+    return Math.round(finalConfidence * 100);
+  }
+  
+  calculateConfidenceVariance(responses) {
+    if (responses.length < 2) return 0;
+    
+    const confidences = responses.map(r => r.confidence);
+    const mean = confidences.reduce((a, b) => a + b, 0) / confidences.length;
+    const variance = confidences.reduce((sum, conf) => sum + Math.pow(conf - mean, 2), 0) / confidences.length;
+    
+    return variance;
+  }
+
   async runMultiAgentAnalysis(query, options = {}) {
     const startTime = Date.now();
     const context = { startTime, ...options };
@@ -515,10 +585,59 @@ Further investigation recommended in areas with lower confidence scores.
         research: researchResult.status === 'fulfilled' ? researchResult.value : null
       };
 
+      // Calculate advanced confidence scores for each agent
+      console.log('🎯 Calculating advanced confidence scores...');
+      const validResponses = Object.values(responses).filter(r => r !== null);
+      
+      // Apply advanced confidence calculation to each response
+      if (responses.literature) {
+        const confidenceData = this.confidenceCalculator.calculateAgentConfidence(
+          responses.literature, query, 'literature', context
+        );
+        responses.literature.confidence = confidenceData.overall;
+        responses.literature.confidenceBreakdown = confidenceData.breakdown;
+        responses.literature.qualityIndicators = confidenceData.qualityIndicators;
+      }
+      
+      if (responses.compound) {
+        const confidenceData = this.confidenceCalculator.calculateAgentConfidence(
+          responses.compound, query, 'compound', context
+        );
+        responses.compound.confidence = confidenceData.overall;
+        responses.compound.confidenceBreakdown = confidenceData.breakdown;
+        responses.compound.qualityIndicators = confidenceData.qualityIndicators;
+      }
+      
+      if (responses.research) {
+        const confidenceData = this.confidenceCalculator.calculateAgentConfidence(
+          responses.research, query, 'research', context
+        );
+        responses.research.confidence = confidenceData.overall;
+        responses.research.confidenceBreakdown = confidenceData.breakdown;
+        responses.research.qualityIndicators = confidenceData.qualityIndicators;
+      }
+
+      // Calculate cross-validation confidence
+      const crossValidationScore = this.confidenceCalculator.calculateCrossValidation(validResponses, query);
+      
       // Coordinate final analysis
       const coordination = await this.coordinateAnalysis(query, responses);
       
+      // Apply confidence to coordinator
+      if (coordination) {
+        const coordinatorConfidenceData = this.confidenceCalculator.calculateAgentConfidence(
+          coordination, query, 'coordinator', { ...context, crossValidation: crossValidationScore }
+        );
+        coordination.confidence = coordinatorConfidenceData.overall;
+        coordination.confidenceBreakdown = coordinatorConfidenceData.breakdown;
+        coordination.qualityIndicators = coordinatorConfidenceData.qualityIndicators;
+        coordination.crossValidationScore = crossValidationScore;
+      }
+      
       const totalTime = Date.now() - startTime;
+      
+      // Calculate sophisticated overall confidence
+      const overallConfidence = this.calculateAdvancedOverallConfidence(responses, crossValidationScore);
       
       return {
         success: true,
@@ -531,7 +650,9 @@ Further investigation recommended in areas with lower confidence scores.
           totalProcessingTime: totalTime,
           timestamp: new Date().toISOString(),
           agentsInvoked: Object.keys(responses).filter(key => responses[key] !== null).length,
-          overallConfidence: this.calculateOverallConfidence(responses)
+          overallConfidence,
+          crossValidationScore,
+          confidenceMethod: 'advanced_multi_metric'
         }
       };
 

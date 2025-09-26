@@ -8,6 +8,7 @@ import {
   LinearProgress,
   Box,
   Chip,
+  useTheme,
 } from '@mui/material';
 import { keyframes } from '@mui/system';
 import {
@@ -35,18 +36,6 @@ const pulse = keyframes`
   }
 `;
 
-const glow = keyframes`
-  0% {
-    box-shadow: 0 0 5px rgba(255, 193, 7, 0.5);
-  }
-  50% {
-    box-shadow: 0 0 20px rgba(255, 193, 7, 0.8), 0 0 30px rgba(255, 193, 7, 0.6);
-  }
-  100% {
-    box-shadow: 0 0 5px rgba(255, 193, 7, 0.5);
-  }
-`;
-
 const rotate = keyframes`
   0% {
     transform: rotate(0deg);
@@ -60,7 +49,21 @@ interface AgentStatusProps {
   agents: Agent[];
 }
 
-const getAgentIcon = (type: Agent['type'], status: Agent['status']) => {
+const getAgentIcon = (type: Agent['type'], status: Agent['status'], theme: any) => {
+  // Create theme-aware glow animation
+  const glowColor = theme.palette.primary.main;
+  const glow = keyframes`
+    0% {
+      box-shadow: 0 0 5px ${glowColor}40;
+    }
+    50% {
+      box-shadow: 0 0 20px ${glowColor}80, 0 0 30px ${glowColor}60;
+    }
+    100% {
+      box-shadow: 0 0 5px ${glowColor}40;
+    }
+  `;
+
   const getAnimationForAgent = (agentType: Agent['type']) => {
     if (status !== 'processing') return {};
     
@@ -75,7 +78,7 @@ const getAgentIcon = (type: Agent['type'], status: Agent['status']) => {
           animation: `${rotate} 3s linear infinite`,
           color: '#2e7d32'
         };
-      case 'crossreference':
+      case 'research':
         return {
           animation: `${glow} 1.5s ease-in-out infinite`,
           borderRadius: '50%',
@@ -95,7 +98,7 @@ const getAgentIcon = (type: Agent['type'], status: Agent['status']) => {
       default:
         return {
           animation: `${pulse} 2s ease-in-out infinite`,
-          color: '#757575'
+          color: theme.palette.text.secondary
         };
     }
   };
@@ -107,7 +110,7 @@ const getAgentIcon = (type: Agent['type'], status: Agent['status']) => {
       return <MenuBook sx={animationStyles} />;
     case 'compound':
       return <Science sx={animationStyles} />;
-    case 'crossreference':
+    case 'research':
       return <Compare sx={animationStyles} />;
     case 'voice':
       return <RecordVoiceOver sx={animationStyles} />;
@@ -134,6 +137,9 @@ const getStatusColor = (status: Agent['status']) => {
 };
 
 const AgentStatus: React.FC<AgentStatusProps> = ({ agents }) => {
+  const theme = useTheme();
+  const isDarkMode = theme.palette.mode === 'dark';
+  
   return (
     <Box>
       <Typography variant="h6" gutterBottom>
@@ -143,7 +149,7 @@ const AgentStatus: React.FC<AgentStatusProps> = ({ agents }) => {
         {agents.map((agent) => (
           <ListItem key={agent.id}>
             <ListItemIcon>
-              {getAgentIcon(agent.type, agent.status)}
+              {getAgentIcon(agent.type, agent.status, theme)}
             </ListItemIcon>
             <ListItemText
               primary={
@@ -164,7 +170,10 @@ const AgentStatus: React.FC<AgentStatusProps> = ({ agents }) => {
                     value={agent.progress}
                     style={{ marginBottom: '8px' }}
                   />
-                  <div style={{ fontSize: '0.75rem', color: 'rgba(0, 0, 0, 0.6)' }}>
+                  <div style={{ 
+                    fontSize: '0.75rem', 
+                    color: theme.palette.text.secondary
+                  }}>
                     Progress: {agent.progress}% | Last updated: {agent.lastUpdate.toLocaleTimeString()}
                   </div>
                 </div>
