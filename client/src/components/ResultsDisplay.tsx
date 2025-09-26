@@ -32,6 +32,25 @@ import {
 } from '@mui/icons-material';
 import { DiscoveryResult } from '../types';
 import TextToSpeechButton from './TextToSpeechButton';
+import MarkdownRenderer from './MarkdownRenderer';
+
+// Helper function to process response text and convert escaped characters
+const processResponseText = (text: string): string => {
+  if (!text) return '';
+  
+  return text
+    // Convert escaped newlines to actual newlines
+    .replace(/\\n/g, '\n')
+    // Convert escaped hashtags to actual hashtags for headers
+    .replace(/\\#/g, '#')
+    // Convert escaped asterisks to actual asterisks for emphasis
+    .replace(/\\\*/g, '*')
+    // Remove extra backslashes
+    .replace(/\\\\/g, '\\')
+    // Clean up any double newlines to single
+    .replace(/\n\n+/g, '\n\n')
+    .trim();
+};
 
 interface ResultsDisplayProps {
   results: DiscoveryResult[];
@@ -101,12 +120,13 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results }) => {
 
   // Apply filter to both traditional and modern results
   const filteredTraditionalResults = traditionalResults.filter(result => 
-    filterAgent === 'all' || filterAgent === 'literature' || result.agentId.toLowerCase().includes(filterAgent.toLowerCase())
+    filterAgent === 'all' || filterAgent === 'literature'
   );
   
   const filteredModernResults = modernResults.filter(result => 
-    filterAgent === 'all' || filterAgent === 'compound' || filterAgent === 'research' || 
-    result.agentId.toLowerCase().includes(filterAgent.toLowerCase())
+    filterAgent === 'all' || 
+    (filterAgent === 'compound' && result.agentId.toLowerCase().includes('compound')) ||
+    (filterAgent === 'research' && result.agentId.toLowerCase().includes('research'))
   );
 
   const generatePDF = () => {
@@ -117,12 +137,22 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results }) => {
       <head>
         <title>AyurDiscovery AI - Research Report</title>
         <style>
-          body { font-family: Georgia, serif; margin: 40px; line-height: 1.6; }
+          body { font-family: Georgia, serif; margin: 40px; line-height: 1.6; color: #333; }
           .header { text-align: center; margin-bottom: 40px; }
           .result { margin-bottom: 30px; page-break-inside: avoid; }
           .agent { color: #1976D2; font-weight: bold; font-size: 18px; }
           .confidence { color: #666; font-size: 14px; }
           .description { margin: 15px 0; }
+          .description h1, .description h2, .description h3 { 
+            color: #2c5aa0; margin: 20px 0 10px 0; font-weight: bold; 
+          }
+          .description h1 { font-size: 24px; }
+          .description h2 { font-size: 20px; }
+          .description h3 { font-size: 16px; }
+          .description strong { font-weight: bold; color: #1565C0; }
+          .description em { font-style: italic; color: #424242; }
+          .description ul { margin: 10px 0; padding-left: 25px; }
+          .description li { margin: 5px 0; }
           .separator { border-top: 1px solid #ddd; margin: 20px 0; }
           @media print { body { margin: 20px; } }
         </style>
@@ -133,15 +163,38 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results }) => {
           <p>Generated on: ${new Date().toLocaleString()}</p>
           <p>Total Results: ${filteredResults.length}</p>
         </div>
-        ${filteredResults.map(result => `
-          <div class="result">
-            <div class="agent">${result.agentId}: ${result.title}</div>
-            <div class="confidence">Confidence: ${Math.round(result.confidence * 100)}%</div>
-            <div class="description">${result.description.replace(/\n/g, '<br>')}</div>
-            <div style="color: #999; font-size: 12px;">Generated at ${result.timestamp.toLocaleString()}</div>
-            <div class="separator"></div>
-          </div>
-        `).join('')}
+        ${filteredResults.map(result => {
+          // Process the response text to clean up markdown formatting
+          const processedText = processResponseText(result.description);
+          
+          // Convert basic markdown to HTML for PDF
+          const htmlText = processedText
+            // Headers
+            .replace(/^### (.*$)/gm, '<h3>$1</h3>')
+            .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+            .replace(/^# (.*$)/gm, '<h1>$1</h1>')
+            // Bold text
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            // Italic text
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+            // Bullet points
+            .replace(/^- (.*$)/gm, '<li>$1</li>')
+            // Convert newlines to breaks
+            .replace(/\n/g, '<br>')
+            // Wrap consecutive <li> elements in <ul>
+            .replace(/(<li>.*?<\/li>)(<br>)*(?=<li>)/gs, '$1')
+            .replace(/(<li>.*?<\/li>)(<br>)*/gs, '<ul>$1</ul>');
+          
+          return `
+            <div class="result">
+              <div class="agent">${result.agentId}: ${result.title}</div>
+              <div class="confidence">Confidence: ${Math.round(result.confidence * 100)}%</div>
+              <div class="description">${htmlText}</div>
+              <div style="color: #999; font-size: 12px;">Generated at ${result.timestamp.toLocaleString()}</div>
+              <div class="separator"></div>
+            </div>
+          `;
+        }).join('')}
       </body>
       </html>
     `;
@@ -165,24 +218,36 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results }) => {
         sx={{ 
           p: 3, 
           mb: 3, 
-          background: 'rgba(102, 126, 234, 0.3)',
+          background: (theme) => theme.palette.mode === 'dark' 
+            ? 'rgba(102, 126, 234, 0.3)' 
+            : 'rgba(102, 126, 234, 0.1)',
           backdropFilter: 'blur(15px)',
-          border: '1px solid rgba(255, 255, 255, 0.2)',
+          border: (theme) => theme.palette.mode === 'dark'
+            ? '1px solid rgba(255, 255, 255, 0.2)'
+            : '1px solid rgba(102, 126, 234, 0.3)',
           borderRadius: 3,
         }}
       >
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Science sx={{ color: 'white', fontSize: 32 }} />
-            <Typography variant="h4" sx={{ color: 'white', fontWeight: 'bold' }}>
+            <Science sx={{ 
+              color: (theme) => theme.palette.mode === 'dark' ? 'white' : '#667EEA',
+              fontSize: 32 
+            }} />
+            <Typography variant="h4" sx={{ 
+              color: (theme) => theme.palette.mode === 'dark' ? 'white' : '#333',
+              fontWeight: 'bold' 
+            }}>
               Analysis Results
             </Typography>
           </Box>
           <Chip 
             label={`${filteredResults.length} Results`} 
             sx={{ 
-              backgroundColor: 'rgba(255,255,255,0.2)', 
-              color: 'white',
+              backgroundColor: (theme) => theme.palette.mode === 'dark'
+                ? 'rgba(255,255,255,0.2)'
+                : 'rgba(102, 126, 234, 0.2)', 
+              color: (theme) => theme.palette.mode === 'dark' ? 'white' : '#333',
               fontWeight: 'bold',
               fontSize: '1rem'
             }} 
@@ -192,22 +257,28 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results }) => {
         <Grid container spacing={2} alignItems="center">
           <Grid item xs={12} sm={6} md={4}>
             <FormControl fullWidth size="small">
-              <InputLabel sx={{ color: 'white' }}>Filter by Agent</InputLabel>
+              <InputLabel sx={{ 
+                color: (theme) => theme.palette.mode === 'dark' ? 'white' : '#666'
+              }}>Filter by Agent</InputLabel>
               <Select
                 value={filterAgent}
                 onChange={(e) => setFilterAgent(e.target.value)}
                 sx={{ 
-                  color: 'white',
-                  '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.5)' },
-                  '& .MuiSvgIcon-root': { color: 'white' }
+                  color: (theme) => theme.palette.mode === 'dark' ? 'white' : '#333',
+                  '& .MuiOutlinedInput-notchedOutline': { 
+                    borderColor: (theme) => theme.palette.mode === 'dark' 
+                      ? 'rgba(255,255,255,0.5)' 
+                      : 'rgba(102, 126, 234, 0.5)'
+                  },
+                  '& .MuiSvgIcon-root': { 
+                    color: (theme) => theme.palette.mode === 'dark' ? 'white' : '#666'
+                  }
                 }}
               >
                 <MenuItem value="all">All Agents</MenuItem>
-                <MenuItem value="literature">Literature Agent</MenuItem>
-                <MenuItem value="compound">Compound Agent</MenuItem>
-                <MenuItem value="research">Research Agent</MenuItem>
-                <MenuItem value="voice">Voice Agent</MenuItem>
-                <MenuItem value="coordinator">Coordinator Agent</MenuItem>
+                <MenuItem value="literature">📚 Literature Agent</MenuItem>
+                <MenuItem value="compound">🧪 Compound Agent</MenuItem>
+                <MenuItem value="research">🔬 Research Agent</MenuItem>
               </Select>
             </FormControl>
           </Grid>
@@ -218,9 +289,15 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results }) => {
               onClick={generatePDF}
               disabled={filteredResults.length === 0}
               sx={{
-                backgroundColor: 'rgba(255,255,255,0.2)',
-                color: 'white',
-                '&:hover': { backgroundColor: 'rgba(255,255,255,0.3)' }
+                backgroundColor: (theme) => theme.palette.mode === 'dark'
+                  ? 'rgba(255,255,255,0.2)'
+                  : 'rgba(102, 126, 234, 0.8)',
+                color: (theme) => theme.palette.mode === 'dark' ? 'white' : 'white',
+                '&:hover': { 
+                  backgroundColor: (theme) => theme.palette.mode === 'dark'
+                    ? 'rgba(255,255,255,0.3)'
+                    : 'rgba(102, 126, 234, 0.9)'
+                }
               }}
             >
               Print/Save as PDF
@@ -284,29 +361,57 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results }) => {
                             {result.title}
                           </Typography>
                           <TextToSpeechButton analysisResult={result.description} />
-                          <Chip
-                            label={`${Math.round(result.confidence * 100)}% confidence`}
-                            size="small"
-                            sx={{
-                              backgroundColor: 'rgba(76, 175, 80, 0.2)',
-                              color: '#4CAF50',
-                              fontWeight: 'bold'
-                            }}
-                          />
+                          <Tooltip 
+                            title={
+                              result.data?.confidenceBreakdown ? (
+                                <Box>
+                                  <Typography variant="caption" sx={{ fontWeight: 'bold' }}>Confidence Breakdown:</Typography>
+                                  <br />
+                                  <Typography variant="caption">Content Quality: {Math.round(result.data.confidenceBreakdown.contentQuality * 100)}%</Typography>
+                                  <br />
+                                  <Typography variant="caption">Source Reliability: {Math.round(result.data.confidenceBreakdown.sourceReliability * 100)}%</Typography>
+                                  <br />
+                                  <Typography variant="caption">Query Matching: {Math.round(result.data.confidenceBreakdown.queryMatching * 100)}%</Typography>
+                                  <br />
+                                  <Typography variant="caption">Model Performance: {Math.round(result.data.confidenceBreakdown.modelPerformance * 100)}%</Typography>
+                                  {result.data.qualityIndicators && result.data.qualityIndicators.length > 0 && (
+                                    <>
+                                      <br />
+                                      <Typography variant="caption" sx={{ fontWeight: 'bold' }}>Quality: {result.data.qualityIndicators.join(', ')}</Typography>
+                                    </>
+                                  )}
+                                </Box>
+                              ) : 'Advanced confidence calculation based on content quality, sources, and relevance'
+                            }
+                            arrow
+                          >
+                            <Chip
+                              label={`${Math.round(result.confidence * 100)}% confidence`}
+                              size="small"
+                              sx={{
+                                backgroundColor: 'rgba(76, 175, 80, 0.2)',
+                                color: '#4CAF50',
+                                fontWeight: 'bold',
+                                cursor: 'help'
+                              }}
+                            />
+                          </Tooltip>
                         </Box>
                         
-                        <Typography 
-                          variant="body1" 
+                        <MarkdownRenderer 
+                          content={processResponseText(result.description)}
                           sx={{ 
                             lineHeight: 1.8,
                             fontSize: '1rem',
-                            whiteSpace: 'pre-wrap',
                             fontFamily: 'Georgia, serif',
-                            color: 'rgba(255, 255, 255, 0.9)'
+                            color: 'rgba(255, 255, 255, 0.9)',
+                            '& p': { color: 'rgba(255, 255, 255, 0.9)' },
+                            '& h1, & h2, & h3, & h4, & h5, & h6': { 
+                              color: '#4CAF50'
+                            },
+                            '& li': { color: 'rgba(255, 255, 255, 0.9)' }
                           }}
-                        >
-                          {result.description}
-                        </Typography>
+                        />
                         
                         <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
                           Generated at {result.timestamp.toLocaleString()}
@@ -359,29 +464,57 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results }) => {
                             {result.agentId}: {result.title}
                           </Typography>
                           <TextToSpeechButton analysisResult={result.description} />
-                          <Chip
-                            label={`${Math.round(result.confidence * 100)}% confidence`}
-                            size="small"
-                            sx={{
-                              backgroundColor: 'rgba(33, 150, 243, 0.2)',
-                              color: '#2196F3',
-                              fontWeight: 'bold'
-                            }}
-                          />
+                          <Tooltip 
+                            title={
+                              result.data?.confidenceBreakdown ? (
+                                <Box>
+                                  <Typography variant="caption" sx={{ fontWeight: 'bold' }}>Confidence Breakdown:</Typography>
+                                  <br />
+                                  <Typography variant="caption">Content Quality: {Math.round(result.data.confidenceBreakdown.contentQuality * 100)}%</Typography>
+                                  <br />
+                                  <Typography variant="caption">Source Reliability: {Math.round(result.data.confidenceBreakdown.sourceReliability * 100)}%</Typography>
+                                  <br />
+                                  <Typography variant="caption">Query Matching: {Math.round(result.data.confidenceBreakdown.queryMatching * 100)}%</Typography>
+                                  <br />
+                                  <Typography variant="caption">Model Performance: {Math.round(result.data.confidenceBreakdown.modelPerformance * 100)}%</Typography>
+                                  {result.data.qualityIndicators && result.data.qualityIndicators.length > 0 && (
+                                    <>
+                                      <br />
+                                      <Typography variant="caption" sx={{ fontWeight: 'bold' }}>Quality: {result.data.qualityIndicators.join(', ')}</Typography>
+                                    </>
+                                  )}
+                                </Box>
+                              ) : 'Advanced confidence calculation based on content quality, sources, and relevance'
+                            }
+                            arrow
+                          >
+                            <Chip
+                              label={`${Math.round(result.confidence * 100)}% confidence`}
+                              size="small"
+                              sx={{
+                                backgroundColor: 'rgba(33, 150, 243, 0.2)',
+                                color: '#2196F3',
+                                fontWeight: 'bold',
+                                cursor: 'help'
+                              }}
+                            />
+                          </Tooltip>
                         </Box>
                         
-                        <Typography 
-                          variant="body1" 
+                        <MarkdownRenderer 
+                          content={processResponseText(result.description)}
                           sx={{ 
                             lineHeight: 1.8,
                             fontSize: '1rem',
-                            whiteSpace: 'pre-wrap',
                             fontFamily: 'Georgia, serif',
-                            color: 'rgba(255, 255, 255, 0.9)'
+                            color: 'rgba(255, 255, 255, 0.9)',
+                            '& p': { color: 'rgba(255, 255, 255, 0.9)' },
+                            '& h1, & h2, & h3, & h4, & h5, & h6': { 
+                              color: '#2196F3'
+                            },
+                            '& li': { color: 'rgba(255, 255, 255, 0.9)' }
                           }}
-                        >
-                          {result.description}
-                        </Typography>
+                        />
                         
                         <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
                           Generated at {result.timestamp.toLocaleString()}

@@ -2,71 +2,40 @@ import React, { useState } from 'react';
 import {
   TextField,
   Button,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Box,
   Typography,
   CircularProgress,
   Chip,
   Stack,
 } from '@mui/material';
-import { Search, Science, Psychology, Translate } from '@mui/icons-material';
+import { Search } from '@mui/icons-material';
 
 interface SearchInterfaceProps {
   onSearch: (query: string, type: string, language?: string) => void;
-  onTestSearch?: (query: string, type: string, language?: string) => void;
   isLoading?: boolean;
 }
 
-const SearchInterface: React.FC<SearchInterfaceProps> = ({ onSearch, onTestSearch, isLoading = false }) => {
+const SearchInterface: React.FC<SearchInterfaceProps> = ({ onSearch, isLoading = false }) => {
   const [query, setQuery] = useState('');
-  const [searchType, setSearchType] = useState('comprehensive');
-  const [language, setLanguage] = useState('en');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (query.trim() && !isLoading) {
-      onSearch(query.trim(), searchType, language);
+      // Always use comprehensive analysis, mixed language support
+      onSearch(query.trim(), 'comprehensive', 'mixed');
     }
-  };
-
-  const handleTestSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!isLoading && onTestSearch) {
-      onTestSearch(query.trim() || 'turmeric for inflammation', searchType, language);
-    }
-  };
-
-  const searchTypeDescriptions = {
-    comprehensive: 'Full multi-agent analysis with all AI services',
-    literature: 'Focus on traditional Ayurvedic texts and research papers',
-    compound: 'Molecular analysis and drug prediction',
-    research: 'Live literature search and verification'
   };
 
   const exampleQueries = [
     'Analyze turmeric for inflammation treatment',
-    'పసుపు వాడకం మరియు వైద్య గుణాలు',
     'Ashwagandha stress management properties',
-    'Traditional fever remedies in Telugu medicine'
+    'Traditional fever remedies in Ayurveda',
+    'Neem antimicrobial compounds',
+    'Brahmi cognitive enhancement mechanisms'
   ];
 
   return (
-    <Box sx={(theme) => ({ 
-      p: theme.spacing(5), 
-      backgroundColor: theme.palette.mode === 'dark'
-        ? 'rgba(51, 65, 85, 0.4)'
-        : 'rgba(248, 250, 252, 0.8)',
-      borderRadius: 3,
-      border: theme.palette.mode === 'dark'
-        ? '1px solid rgba(71, 85, 105, 0.3)'
-        : '1px solid rgba(226, 232, 240, 0.6)',
-      boxShadow: theme.palette.mode === 'dark'
-        ? '0 4px 16px rgba(0, 0, 0, 0.2)'
-        : '0 2px 12px rgba(0,0,0,0.08)',
-    })}>
+    <Box sx={{ width: '100%', maxWidth: 800, mx: 'auto' }}>
       <Typography 
         variant="h5" 
         sx={(theme) => ({ 
@@ -131,109 +100,12 @@ const SearchInterface: React.FC<SearchInterfaceProps> = ({ onSearch, onTestSearc
             fullWidth
           />
 
-          {/* Options Row */}
+          {/* Search Button */}
           <Box sx={{ 
             display: 'flex', 
-            gap: (theme) => theme.spacing(3), 
-            flexWrap: 'wrap', 
-            alignItems: 'center',
-            pt: (theme) => theme.spacing(1)
+            justifyContent: 'center',
+            pt: (theme) => theme.spacing(2)
           }}>
-            <FormControl sx={{ 
-              minWidth: 220,
-              '& .MuiInputBase-root': {
-                height: 56
-              }
-            }}>
-              <InputLabel>Analysis Type</InputLabel>
-              <Select
-                value={searchType}
-                label="Analysis Type"
-                onChange={(e) => setSearchType(e.target.value)}
-                disabled={isLoading}
-                sx={(theme) => ({
-                  backgroundColor: theme.palette.mode === 'dark'
-                    ? 'rgba(51, 65, 85, 0.6)'
-                    : 'white',
-                  '& .MuiOutlinedInput-notchedOutline': {
-                    borderColor: theme.palette.mode === 'dark'
-                      ? 'rgba(71, 85, 105, 0.5)'
-                      : 'rgba(203, 213, 225, 0.8)',
-                  },
-                  '&:hover .MuiOutlinedInput-notchedOutline': {
-                    borderColor: theme.palette.primary.main,
-                  },
-                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                    borderColor: theme.palette.primary.main,
-                  },
-                  '& .MuiSelect-select': {
-                    color: theme.palette.text.primary,
-                  },
-                })}
-              >
-                <MenuItem value="comprehensive">
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Science fontSize="small" />
-                    Comprehensive Analysis
-                  </Box>
-                </MenuItem>
-                <MenuItem value="literature">
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Psychology fontSize="small" />
-                    Literature Focus
-                  </Box>
-                </MenuItem>
-                <MenuItem value="compound">
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    🧬 Compound Analysis
-                  </Box>
-                </MenuItem>
-                <MenuItem value="research">
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    📚 Research Search
-                  </Box>
-                </MenuItem>
-              </Select>
-            </FormControl>
-
-            <FormControl sx={{ 
-              minWidth: 140,
-              '& .MuiInputBase-root': {
-                height: 56
-              }
-            }}>
-              <InputLabel>Language</InputLabel>
-              <Select
-                value={language}
-                label="Language"
-                onChange={(e) => setLanguage(e.target.value)}
-                disabled={isLoading}
-                sx={(theme) => ({
-                  backgroundColor: theme.palette.mode === 'dark'
-                    ? 'rgba(51, 65, 85, 0.6)'
-                    : 'white',
-                  '& .MuiOutlinedInput-notchedOutline': {
-                    borderColor: theme.palette.mode === 'dark'
-                      ? 'rgba(71, 85, 105, 0.5)'
-                      : 'rgba(203, 213, 225, 0.8)',
-                  },
-                  '&:hover .MuiOutlinedInput-notchedOutline': {
-                    borderColor: theme.palette.primary.main,
-                  },
-                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                    borderColor: theme.palette.primary.main,
-                  },
-                  '& .MuiSelect-select': {
-                    color: theme.palette.text.primary,
-                  },
-                })}
-              >
-                <MenuItem value="en">🇺🇸 English</MenuItem>
-                <MenuItem value="te">🇮🇳 Telugu</MenuItem>
-                <MenuItem value="mixed">🌐 Mixed</MenuItem>
-              </Select>
-            </FormControl>
-
             <Button
               type="submit"
               variant="contained"
@@ -241,13 +113,13 @@ const SearchInterface: React.FC<SearchInterfaceProps> = ({ onSearch, onTestSearc
               startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : <Search />}
               disabled={!query.trim() || isLoading}
               sx={(theme) => ({ 
-                minWidth: 160,
+                minWidth: 200,
                 height: 56,
                 background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
                 transition: 'all 0.3s ease-in-out',
-                fontSize: '1rem',
+                fontSize: '1.1rem',
                 fontWeight: 600,
-                px: theme.spacing(4),
+                px: theme.spacing(6),
                 '&:hover': { 
                   background: `linear-gradient(135deg, ${theme.palette.primary.light} 0%, ${theme.palette.primary.main} 100%)`,
                   boxShadow: `0 8px 25px ${theme.palette.mode === 'dark' 
@@ -259,53 +131,11 @@ const SearchInterface: React.FC<SearchInterfaceProps> = ({ onSearch, onTestSearc
                 }
               })}
             >
-              {isLoading ? 'Analyzing...' : 'Analyze'}
+              {isLoading ? 'AI Agents Analyzing...' : 'Start Analysis'}
             </Button>
-
-            {/* Test Button - Uses predefined data without API calls */}
-            {onTestSearch && (
-              <Button
-                variant="outlined"
-                size="large"
-                startIcon={<Science />}
-                onClick={handleTestSubmit}
-                disabled={isLoading}
-                sx={(theme) => ({ 
-                  minWidth: 140,
-                  height: 56,
-                  borderColor: theme.palette.mode === 'dark' 
-                    ? 'rgba(255, 193, 7, 0.8)' 
-                    : '#FF9800',
-                  color: theme.palette.mode === 'dark' 
-                    ? '#FFC107' 
-                    : '#FF9800',
-                  background: theme.palette.mode === 'dark'
-                    ? 'rgba(255, 193, 7, 0.1)'
-                    : 'rgba(255, 152, 0, 0.1)',
-                  transition: 'all 0.3s ease-in-out',
-                  fontSize: '1rem',
-                  fontWeight: 600,
-                  px: theme.spacing(3),
-                  '&:hover': { 
-                    borderColor: theme.palette.mode === 'dark' 
-                      ? '#FFC107' 
-                      : '#F57C00',
-                    background: theme.palette.mode === 'dark'
-                      ? 'rgba(255, 193, 7, 0.2)'
-                      : 'rgba(255, 152, 0, 0.2)',
-                    boxShadow: `0 4px 15px ${theme.palette.mode === 'dark' 
-                      ? 'rgba(255, 193, 7, 0.3)' 
-                      : 'rgba(255, 152, 0, 0.3)'}`,
-                    transform: 'translateY(-1px)'
-                  }
-                })}
-              >
-                Test Demo
-              </Button>
-            )}
           </Box>
 
-          {/* Analysis Type Description */}
+          {/* AI Features Description */}
           <Typography 
             variant="body2" 
             color="text.secondary" 
@@ -322,9 +152,10 @@ const SearchInterface: React.FC<SearchInterfaceProps> = ({ onSearch, onTestSearc
               border: theme.palette.mode === 'dark'
                 ? '1px solid rgba(99, 102, 241, 0.2)'
                 : 'none',
+              textAlign: 'center'
             })}
           >
-            {searchTypeDescriptions[searchType as keyof typeof searchTypeDescriptions]}
+            🤖 AI supports mixed language input and selects optimal analysis approach
           </Typography>
 
           {/* Example Queries */}
@@ -334,7 +165,8 @@ const SearchInterface: React.FC<SearchInterfaceProps> = ({ onSearch, onTestSearc
               sx={(theme) => ({ 
                 mb: theme.spacing(2), 
                 fontWeight: 500,
-                color: theme.palette.text.primary
+                color: theme.palette.text.primary,
+                textAlign: 'center'
               })}
             >
               Try these examples:
@@ -344,7 +176,8 @@ const SearchInterface: React.FC<SearchInterfaceProps> = ({ onSearch, onTestSearc
               spacing={1.5} 
               sx={{ 
                 flexWrap: 'wrap', 
-                gap: (theme) => theme.spacing(1.5)
+                gap: (theme) => theme.spacing(1.5),
+                justifyContent: 'center'
               }}
             >
               {exampleQueries.map((example, index) => (

@@ -52,8 +52,8 @@ const aiServices = {
     };
   },
 
-  // Cross Reference Agent - Modern research integration
-  crossreference: async (query) => {
+  // Research Agent - Modern research integration
+  research: async (query) => {
     const studies = [
       'Clinical trial shows 85% efficacy',
       'Preclinical studies demonstrate safety',
@@ -65,7 +65,7 @@ const aiServices = {
     const randomStudy = studies[Math.floor(Math.random() * studies.length)];
     
     return {
-      title: `Cross-Reference Analysis: ${query}`,
+      title: `Research Analysis: ${query}`,
       description: `Modern research validation: ${randomStudy} for ${query}.`,
       confidence: Math.random() * 0.2 + 0.8,
       data: {
@@ -121,7 +121,7 @@ router.post('/', async (req, res) => {
 
     // Process with relevant agents based on type
     const agentsToUse = type === 'general' 
-      ? ['literature', 'compound', 'crossreference']
+      ? ['literature', 'compound', 'research']
       : [type];
 
     for (const agentType of agentsToUse) {
